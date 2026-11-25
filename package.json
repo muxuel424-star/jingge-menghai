@@ -1,0 +1,15 @@
+{
+  "name": "jingge-menghai",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "node --watch-path=src --watch-path=assets/side --watch-path=index.html --watch-path=build.mjs build.mjs --serve 8124",
+    "build:pages": "node build.mjs --pages"
+  },
+  "dependencies": {
+    "esbuild": "0.25.10",
+    "three": "0.180.0"
+  }
+}

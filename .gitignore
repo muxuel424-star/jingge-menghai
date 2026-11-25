@@ -1,0 +1,16 @@
+/node_modules/
+/dist/
+/.env
+/.env.*
+*.log
+
+# Archive of the original 3D prototype is kept locally.
+/assets/*
+!/assets/side/
+/src/*
+!/src/side/
+!/src/audio.js
+!/src/meta.js
+!/src/ocean-data.js
+/tools/*
+!/tools/serve.cjs
