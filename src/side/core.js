@@ -1,4 +1,4 @@
-import { DREAM_REEF, floorAt, roofAt } from './reefs.js';
+import { DREAM_REEF, resolveTerrain } from './reefs.js';
 
 export const START_INSOMNIA = 1095;
 export const TOTAL_TIME = 480;
@@ -59,7 +59,7 @@ export class Dive {
     p.dash = clamp(p.dash + (p.dashing ? -34 : 22) * dt, 0, 100);
     if (p.dash === 0) p.exhausted = true;
     if (!input.dash || p.dash >= 22) p.exhausted = false;
-    const speed = (p.dashing ? 255 : singing ? 97 : 150) * (p.speed ?? 1);
+    const speed = (p.dashing ? (this.zone ? 355 : 255) : singing ? 110 : this.zone ? 195 : 150) * (p.speed ?? 1);
     const inertia = 1 - Math.exp(-9 * dt);
     p.vx += (x * speed - p.vx) * inertia;
     p.vy += (y * speed - p.vy) * inertia;
@@ -72,17 +72,9 @@ export class Dive {
     p.scull = (p.scull + dt * strokeRate) % 1;
     p.tilt += (clamp(p.vy / 580, -0.32, 0.32) - p.tilt) * inertia;
     p.x = clamp(p.x + p.vx * dt, 26, this.reef.width - 26);
-    const nextY = p.y + p.vy * dt;
+    p.y += p.vy * dt;
     const padding = 23 + Math.min(12, (p.size - 1) * 6);
-    const roof = roofAt(p.x, this.reef) + padding;
-    const floor = floorAt(p.x, this.reef) - padding;
-    p.y = clamp(nextY, roof, floor);
-    if (nextY !== p.y) {
-      const edge = nextY < roof ? roofAt : floorAt;
-      const slope = (edge(p.x + 2, this.reef) - edge(p.x - 2, this.reef)) / 4;
-      p.vx = (p.vx + p.vy * slope) / (1 + slope * slope);
-      p.vy = p.vx * slope;
-    }
+    resolveTerrain(p, padding, this.reef);
     p.invuln = Math.max(0, p.invuln - dt);
     this.shake = Math.max(0, this.shake - dt * 20);
     this.damage = Math.max(0, this.damage - dt * 2.8);

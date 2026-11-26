@@ -235,8 +235,13 @@
     <div class="route"><i id="routeBar"></i></div>
     <button id="btnPause" aria-label="暂停" title="暂停（Esc）">Ⅱ</button>
   </div>
-  <div id="bossStatus" class="hidden"><span id="bossName"></span><div class="hudTrack"><i id="bossBar"></i></div></div>
+  <div id="bossStatus" class="hidden"><span id="bossName"></span><small id="bossHint"></small><div class="hudTrack"><i id="bossBar"></i></div></div>
   <div id="combo"></div>
+  <div id="seaChart" class="hidden">
+    <button id="btnMap" aria-label="展开或收起海图">海域图 · Tab</button>
+    <canvas id="seaMap" width="720" height="270"></canvas>
+    <span class="chartLegend">青点 猎物 · 红点 首领 · 白点 自己</span>
+  </div>
   <div class="toolsCard"><div class="hudMetric"><span>冲刺</span><span>Shift</span></div><div class="hudTrack"><i id="dashBar"></i></div></div>
   <div id="songPulse" class="hidden">到亮线时松开<div class="hudTrack"><i id="chargeBar"></i></div></div>
   <div id="runNotice" role="status"></div>
@@ -255,7 +260,7 @@
     <div class="eyebrow">深海鲸宫 · 横版探索</div>
     <h1>鲸歌梦海</h1>
     <div class="subt">大肥鱼的夜班</div>
-    <p class="story">城里的人睡着以后，梦会变成发光的小鱼，游进夜空底下的海。<br>今晚有 <b>1095</b> 个梦迷了路。满月大潮之前，把它们送回<b>月光井</b>。</p>
+    <p class="story">蓝色的小荧鱼在礁丛间闪动，深渊里的巨口已经盯上了你。<br>一路捕食、长大，从珊瑚群岛游进鲸骨王庭。</p>
     <div class="keys">
       <span><i class="kbd">W A S D</i>上下左右游动</span>
       <span><i class="kbd">方向键</i>游动</span>
@@ -264,10 +269,10 @@
       <span><i class="kbd">按住左键</i><i class="kbd">F</i>唱鲸歌</span>
       <span><i class="kbd">Esc</i>暂停　<i class="kbd">M</i>静音</span>
     </div>
-    <div class="rules">碰到梦，它就会排成一串跟着你；一次送回越多，分越高。<br>噩梦会吃落单的梦、叼散你身后的梦。鲸歌能把它们唱睡，还能把附近的梦唤过来。<br>唱歌耗气息，<b>泡泡泉</b>能补满。水母……可以弹。</div>
+    <div class="rules">饱食度会持续下降，追上鱼群才能游得更远。<br>每次进化都能吃下更强的生物。沿海流探索，躲过狩猎者，再回头挑战它们。</div>
     <div class="btnrow">
-      <button class="btn" id="btnStart" disabled>正在加载深海…</button>
-      <button class="btn ghost" id="btnHunt" disabled>捕食进化<small>捕食 · 长大 · 挑战五海首领</small></button>
+      <button class="btn" id="btnHunt" disabled>捕食进化<small>开放海域 · 食物链生存</small></button>
+      <button class="btn ghost" id="btnStart" disabled>正在加载深海…</button>
     </div>
   </div>
 </div>
@@ -276,17 +281,18 @@
   <div class="card">
     <div class="eyebrow">深海鲸宫 · 夜班加练 · 五海捕食进化</div>
     <h2>五海探索 · 吃到长大</h2>
-    <p class="lead">碰到小荧鱼和绿标猎物就能吃掉它，补充饱食度并积累进化经验。红标猎物和海胆会扎伤你。</p>
+    <p class="lead">从小荧鱼吃起，逐阶解锁更大的猎物。自由穿梭五片海域，在群礁、沉船和深渊里追逐鱼群。大型掠食者会猎杀弱小的你。</p>
     <div class="ladder" id="huntLadder"></div>
     <div class="metaGrid">
       <div class="panel"><div class="ph"><span>夜班任务</span><span>完成即得珍珠</span></div><div id="metaMissions"></div></div>
       <div class="panel"><div class="ph"><span>鲸宫小金库</span><span>珍珠 <b id="metaPearls">0</b></span></div><div id="metaUpg"></div></div>
     </div>
     <div class="recordLine" id="metaRecord"></div>
-    <details class="rules"><summary>操作与海门</summary>
-      <b>左键 / J</b> 猛扑，<b>右键 / F</b> 蓄力唱鲸歌，到亮线时松开。鲸歌能定住首领，也能点亮海脉祭坛。<br>
-      在前四片海域点亮两座祭坛、击败首领，拾取潮汐钥匙后从右侧海门继续。左侧海门可以返回上一片海域。<br>
-      连续捕食可触发九秒狂食。穿过洋流环能恢复冲刺，海带可以遮住你的行踪。
+    <details class="rules"><summary>捕食与生存</summary>
+      接触体型允许的猎物会自动吞食，<b>按住左键 / J</b> 连续猛扑，配合方向键攻击。持续进食恢复饱食度、积累经验与狂食。<br>
+      沿洋流自由进出五海，<b>Tab</b> 展开海图。宝箱常藏在岛礁底部和沉船深处，逃离追逐时可以钻进海带。<br>
+      挑战首领需要达到对应进化阶级。躲过预警攻击，趁收招或绕到背后猛扑。<b>F / 右键</b> 蓄力鲸歌可以打断蓄势，首领短暂适应后会抵抗连续定身。<br>
+      暂停时选择<b>带珍珠返航</b>可以结算本次捕食。
     </details>
     <div class="btnrow">
       <button class="btn" id="btnHuntStart">下潜捕食</button>
@@ -322,7 +328,7 @@
   <div class="pcard">
     <div class="big serif">暂停</div>
     <div class="p2">Esc 继续 · M 静音</div>
-    <div class="btnrow"><button class="btn" id="btnResume">继续下潜</button><button class="btn ghost" id="btnPauseMenu">回到标题</button></div>
+    <div class="btnrow"><button class="btn" id="btnResume">继续下潜</button><button class="btn" id="btnReturn">带珍珠返航</button><button class="btn ghost" id="btnPauseMenu">回到标题</button></div>
   </div>
 </div>
 

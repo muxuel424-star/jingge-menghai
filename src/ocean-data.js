@@ -1,10 +1,10 @@
 export const STAGES = [
   { name: '见习女仆', size: 1.0, hp: 100, xp: 0, speed: 1.0 },
-  { name: '正式女仆', size: 1.3, hp: 140, xp: 40, speed: 1.08 },
-  { name: '女仆领班', size: 1.65, hp: 190, xp: 120, speed: 1.16 },
-  { name: '女仆长', size: 2.05, hp: 250, xp: 280, speed: 1.25 },
-  { name: '鲸宫总管', size: 2.5, hp: 320, xp: 560, speed: 1.34 },
-  { name: '深海之主', size: 3.0, hp: 400, xp: 1000, speed: 1.44 },
+  { name: '正式女仆', size: 1.3, hp: 140, xp: 120, speed: 1.08 },
+  { name: '女仆领班', size: 1.65, hp: 190, xp: 430, speed: 1.16 },
+  { name: '女仆长', size: 2.05, hp: 250, xp: 1100, speed: 1.25 },
+  { name: '鲸宫总管', size: 2.5, hp: 320, xp: 2300, speed: 1.34 },
+  { name: '深海之主', size: 3.0, hp: 400, xp: 4200, speed: 1.44 },
 ];
 
 export const RIVALS = [
@@ -105,109 +105,11 @@ export const SALARY = {
 };
 
 export const MAPS = [
-  {
-    idx: 0, key: 'bay', name: '翡翠浅湾 · 珊瑚迷城', short: '翡翠浅湾', seal: '浅湾',
-    sub: '第一海域 · 四大珊瑚峡谷分区与双座海脉祭坛 · 镇守首领：Grok 前辈',
-    bossKey: 'grok', recStage: 0, bossStage: 1,
-    spawn: [0, 14],
-    subZones: [
-      { key: 'south', name: '南境 · 浅湾高台', sub: '阳光觅食浅台与三道珊瑚峡谷拱门', x: 0, z: 52, r: 34 },
-      { key: 'west', name: '西境 · 海葵秘谷', sub: '西翼珊瑚回廊 · 镇守【西境·海脉共鸣祭坛】', x: -74, z: -18, r: 36 },
-      { key: 'east', name: '东境 · 翡翠珠沟', sub: '东翼深海裂谷 · 镇守【东境·海脉共鸣祭坛】', x: 74, z: -18, r: 36 },
-      { key: 'north', name: '北境 · 珊瑚王庭', sub: 'Grok前辈领地与北境【远古封印海门】', x: 0, z: -38, r: 38 },
-    ],
-    altars: [
-      { key: 'west', name: '西境·海脉共鸣祭坛', x: -74, z: -18 },
-      { key: 'east', name: '东境·海脉共鸣祭坛', x: 74, z: -18 },
-    ],
-    portals: [
-      { to: 1, x: 0, z: -96, name: '青花古渡', sub: '第二海域 · 千问前辈', col: [0.35, 1.0, 1.8], spawnAt: [0, 14], primary: true },
-      { to: 2, x: 112, z: -18, name: '幽影紫海', sub: '第三海域 · Gemini前辈', col: [1.2, 0.45, 1.8], spawnAt: [0, 14] },
-    ],
-  },
-  {
-    idx: 1, key: 'porcelain', name: '青花古渡 · 千帆沉船湾', short: '青花古渡', seal: '古渡',
-    sub: '第二海域 · 古渡断桥、梅瓶秘谷、沉船桅林与画舫旗舰 · 镇守首领：千问前辈',
-    bossKey: 'qwen', recStage: 1, bossStage: 2,
-    spawn: [0, 14],
-    subZones: [
-      { key: 'south', name: '南境 · 青花古渡口', sub: '雕花望柱长廊与三道古渡石拱', x: 0, z: 52, r: 34 },
-      { key: 'west', name: '西境 · 梅瓶沉宝谷', sub: '巨型青花梅瓶秘谷 · 镇守【西境·海脉共鸣祭坛】', x: -74, z: -18, r: 36 },
-      { key: 'east', name: '东境 · 断桅旋涡沟', sub: '古船残骸深沟 · 镇守【东境·海脉共鸣祭坛】', x: 74, z: -18, r: 36 },
-      { key: 'north', name: '北境 · 画舫旗舰殿', sub: '千问前辈领地与北境【远古封印海门】', x: 0, z: -38, r: 38 },
-    ],
-    altars: [
-      { key: 'west', name: '西境·海脉共鸣祭坛', x: -74, z: -18 },
-      { key: 'east', name: '东境·海脉共鸣祭坛', x: 74, z: -18 },
-    ],
-    portals: [
-      { to: 2, x: 0, z: -96, name: '幽影紫海', sub: '第三海域 · Gemini前辈', col: [1.2, 0.45, 1.8], spawnAt: [0, 14], primary: true },
-      { to: 0, x: 0, z: 92, name: '翡翠浅湾', sub: '返回第一海域 · 珊瑚迷城', col: [0.25, 1.5, 1.1], spawnAt: [0, 14], isReturn: true },
-      { to: 3, x: 112, z: -18, name: '玄墨熔渊', sub: '第四海域 · 智谱前辈', col: [1.8, 0.7, 0.2], spawnAt: [0, 14] },
-    ],
-  },
-  {
-    idx: 2, key: 'violet', name: '幽影紫海 · 荧光水母窟', short: '幽影紫海', seal: '紫海',
-    sub: '第三海域 · 新月拱廊、浮空母皇伞林与紫晶深渊 · 镇守首领：Gemini 前辈',
-    bossKey: 'gemini', recStage: 2, bossStage: 3,
-    spawn: [0, 14],
-    subZones: [
-      { key: 'south', name: '南境 · 新月迎宾台', sub: '灵猫新月拱门与幻紫海草台', x: 0, z: 52, r: 34 },
-      { key: 'west', name: '西境 · 垂丝水母林', sub: '浮空巨型水母窟 · 镇守【西境·海脉共鸣祭坛】', x: -74, z: -18, r: 36 },
-      { key: 'east', name: '东境 · 紫晶幽影渊', sub: '深渊猫神遗迹 · 镇守【东境·海脉共鸣祭坛】', x: 74, z: -18, r: 36 },
-      { key: 'north', name: '北境 · 双月灵猫殿', sub: 'Gemini前辈领地与北境【远古封印海门】', x: 0, z: -38, r: 38 },
-    ],
-    altars: [
-      { key: 'west', name: '西境·海脉共鸣祭坛', x: -74, z: -18 },
-      { key: 'east', name: '东境·海脉共鸣祭坛', x: 74, z: -18 },
-    ],
-    portals: [
-      { to: 3, x: 0, z: -96, name: '玄墨熔渊', sub: '第四海域 · 智谱前辈', col: [1.8, 0.7, 0.2], spawnAt: [0, 14], primary: true },
-      { to: 1, x: 0, z: 92, name: '青花古渡', sub: '返回第二海域 · 千帆沉船湾', col: [0.35, 1.0, 1.8], spawnAt: [0, 14], isReturn: true },
-      { to: 0, x: -112, z: -18, name: '翡翠浅湾', sub: '返回第一海域 · 珊瑚迷城', col: [0.25, 1.5, 1.1], spawnAt: [0, 14], isReturn: true },
-    ],
-  },
-  {
-    idx: 3, key: 'magma', name: '玄墨熔渊 · 九星火山口', short: '玄墨熔渊', seal: '熔渊',
-    sub: '第四海域 · 玄武石阶、熔岩裂谷、黑曜晶林与天元星盘 · 镇守首领：智谱前辈',
-    bossKey: 'zhipu', recStage: 3, bossStage: 4,
-    spawn: [0, 14],
-    subZones: [
-      { key: 'south', name: '南境 · 玄武热泉阶', sub: '喷发沸腾热泉与黑曜峡谷拱门', x: 0, z: 52, r: 34 },
-      { key: 'west', name: '西境 · 金脉晶柱谷', sub: '弯角熔岩晶柱林 · 镇守【西境·海脉共鸣祭坛】', x: -74, z: -18, r: 36 },
-      { key: 'east', name: '东境 · 炽焰裂谷渊', sub: '深渊熔岩火口 · 镇守【东境·海脉共鸣祭坛】', x: 74, z: -18, r: 36 },
-      { key: 'north', name: '北境 · 天元星盘台', sub: '智谱前辈领地与北境【远古封印海门】', x: 0, z: -38, r: 38 },
-    ],
-    altars: [
-      { key: 'west', name: '西境·海脉共鸣祭坛', x: -74, z: -18 },
-      { key: 'east', name: '东境·海脉共鸣祭坛', x: 74, z: -18 },
-    ],
-    portals: [
-      { to: 4, x: 0, z: -96, name: '黄金圣殿', sub: '终极海域 · Claude女仆长', col: [1.9, 1.45, 0.45], spawnAt: [0, 14], primary: true },
-      { to: 2, x: 0, z: 92, name: '幽影紫海', sub: '返回第三海域 · 荧光水母窟', col: [1.2, 0.45, 1.8], spawnAt: [0, 14], isReturn: true },
-      { to: 1, x: -112, z: -18, name: '青花古渡', sub: '返回第二海域 · 千帆沉船湾', col: [0.35, 1.0, 1.8], spawnAt: [0, 14], isReturn: true },
-    ],
-  },
-  {
-    idx: 4, key: 'sanctuary', name: '黄金圣殿 · 远古鲸骨城', short: '黄金圣殿', seal: '圣殿',
-    sub: '终极海域 · 凯旋柱廊、东西钟楼侧殿与48米巨鲸骸骨圣堂 · 终极首领：Claude 女仆长',
-    bossKey: 'claude', recStage: 4, bossStage: 5,
-    spawn: [0, 14],
-    subZones: [
-      { key: 'south', name: '南境 · 凯旋金柱廊', sub: '黄金玫瑰前庭与哥特迎宾拱门', x: 0, z: 52, r: 34 },
-      { key: 'west', name: '西境 · 圣歌钟楼谷', sub: '西侧黄金回廊 · 镇守【西境·海脉共鸣祭坛】', x: -74, z: -18, r: 36 },
-      { key: 'east', name: '东境 · 星辉礼拜渊', sub: '东侧深海圣坛 · 镇守【东境·海脉共鸣祭坛】', x: 74, z: -18, r: 36 },
-      { key: 'north', name: '北境 · 鲸骨大圣堂', sub: 'Claude女仆长王座与48米远古巨鲸骸骨', x: 0, z: -38, r: 42 },
-    ],
-    altars: [
-      { key: 'west', name: '西境·海脉共鸣祭坛', x: -74, z: -18 },
-      { key: 'east', name: '东境·海脉共鸣祭坛', x: 74, z: -18 },
-    ],
-    portals: [
-      { to: 3, x: 0, z: 92, name: '玄墨熔渊', sub: '返回第四海域 · 九星火山口', col: [1.8, 0.7, 0.2], spawnAt: [0, 14], isReturn: true },
-      { to: 0, x: -112, z: -18, name: '翡翠浅湾', sub: '返回第一海域 · 珊瑚迷城', col: [0.25, 1.5, 1.1], spawnAt: [0, 14], isReturn: true },
-    ],
-  },
+  { idx: 0, key: 'bay', short: '翡翠浅湾', name: '翡翠浅湾 · 珊瑚群岛', recStage: 0 },
+  { idx: 1, key: 'porcelain', short: '青花古渡', name: '青花古渡 · 沉船迷航', recStage: 1 },
+  { idx: 2, key: 'violet', short: '幽影紫海', name: '幽影紫海 · 垂直深渊', recStage: 2 },
+  { idx: 3, key: 'magma', short: '玄墨熔渊', name: '玄墨熔渊 · 火山裂谷', recStage: 3 },
+  { idx: 4, key: 'sanctuary', short: '黄金圣殿', name: '黄金圣殿 · 鲸骨王庭', recStage: 4 },
 ];
 
 export const PREY = {
@@ -215,4 +117,5 @@ export const PREY = {
   lantern: { tier: 1, size: 0.82, xp: 10, food: 14, dmg: 9, n: 18, col: [1.5, 1.15, 0.35], name: '灯笼鱼', tag: '2阶可吃' },
   manta: { tier: 2, size: 1.52, xp: 24, food: 22, dmg: 14, n: 9, col: [1.1, 0.55, 1.6], name: '夜光鳐', tag: '3阶可吃' },
   royal: { tier: 3, size: 2.05, xp: 40, food: 30, dmg: 18, n: 6, col: [1.65, 0.78, 0.3], name: '赤甲皇鱼', tag: '4阶可吃' },
+  abyss: { tier: 4, size: 2.6, xp: 75, food: 35, dmg: 32, col: [0.7, 0.35, 1.5], name: '巨口鮟鱇', tag: '5阶可吃' },
 };

@@ -1,6 +1,6 @@
 import { MAPS, PREY } from '../ocean-data.js';
 import { TAU, clamp } from './core.js';
-import { DREAM_REEF, floorAt, roofAt } from './reefs.js';
+import { DREAM_REEF, floorAt, roofAt, regionAt } from './reefs.js';
 import { HERO_POSES, animatedSprite, prepareRivals, prepareSwimmer } from './swim-animation.js';
 import swimmer from '../../assets/side/swimmer.webp';
 import reef from '../../assets/side/reef.webp';
@@ -17,11 +17,17 @@ import porcelain from '../../assets/side/porcelain.webp';
 import violet from '../../assets/side/violet.webp';
 import magma from '../../assets/side/magma.webp';
 import sanctuary from '../../assets/side/sanctuary.webp';
+import coralIsland from '../../assets/side/island-coral.webp';
+import wreckIsland from '../../assets/side/island-wreck.webp';
+import crystalIsland from '../../assets/side/island-crystal.webp';
+import ventIsland from '../../assets/side/island-vent.webp';
+import boneIsland from '../../assets/side/island-bone.webp';
 
 const FISH = ['fry', 'lantern', 'manta', 'royal', 'nightmare', 'jelly'];
 const FISH_SIZE = [26, 48, 85, 94, 89, 74];
 const RIVAL = ['grok', 'qwen', 'gemini', 'zhipu', 'claude', 'salary'];
-const LOOT = { crystal: [0, 47], clam: [1, 42], chest: [2, 52], urchin: [3, 47], key: [5, 45] };
+const LOOT = { crystal: [0, 47], clam: [1, 42], chest: [2, 52], urchin: [3, 47] };
+const DECOR = { coral: 0, wreck: 1, crystal: 2, vent: 3, bone: 4 };
 const mod = (x, n) => (x % n + n) % n;
 const noise = n => {
   const v = Math.sin(n * 127.13 + 43.33) * 43758.5453;
@@ -74,14 +80,15 @@ export class OceanView {
 
   async load() {
     const [body, dash, bite, sing, hurt, rivalsAtlas, dream, fish, landmarksAtlas, lootAtlas, ...backgrounds] = await Promise.all(
-      [swimmer, dashImage, biteImage, singImage, hurtImage, rivals, reef, fauna, landmarks, loot, bay, porcelain, violet, magma, sanctuary].map(load));
+      [swimmer, dashImage, biteImage, singImage, hurtImage, rivals, reef, fauna, landmarks, loot, bay, porcelain, violet, magma, sanctuary, coralIsland, wreckIsland, crystalIsland, ventIsland, boneIsland].map(load));
     this.swimmer = prepareSwimmer(body, { dash, bite, sing, hurt });
     this.rivalSprites = prepareRivals(rivalsAtlas);
     this.dreamBackground = dream;
     this.fauna = fish;
     this.landmarks = landmarksAtlas;
     this.loot = lootAtlas;
-    this.backgrounds = backgrounds;
+    this.backgrounds = backgrounds.slice(0,5);
+    this.islands = backgrounds.slice(5);
   }
 
   resize() {
@@ -91,7 +98,8 @@ export class OceanView {
     this.canvas.width = Math.round(this.w * this.ratio);
     this.canvas.height = Math.round(this.h * this.ratio);
     this.ctx.imageSmoothingQuality = "high";
-    this.scale = Math.min(this.h / 555, this.w / 520);
+    this.baseScale = Math.min(this.h / 600, this.w / 540);
+    this.scale = this.baseScale;
     this.viewW = this.w / this.scale;
     this.viewH = this.h / this.scale;
     this.snap = true;
@@ -99,6 +107,10 @@ export class OceanView {
 
   camera(dive, dt) {
     const p = dive.player;
+    const desired = this.baseScale / (1 + (dive.zone ? dive.stage * 0.045 : 0));
+    this.scale += (desired - this.scale) * (this.snap ? 1 : 1 - Math.exp(-dt * 2));
+    this.viewW = this.w / this.scale;
+    this.viewH = this.h / this.scale;
     const x = clamp(p.x - this.viewW * (p.dir > 0 ? 0.41 : 0.53), -64, Math.max(-64, dive.reef.width - this.viewW + 64));
     const y = clamp(p.y + p.vy * 0.14 - this.viewH * 0.49, 4, Math.max(4, dive.reef.bounds - this.viewH));
     const easing = this.snap ? 1 : 1 - Math.exp(-dt * 4.8);
@@ -137,6 +149,7 @@ export class OceanView {
     c.translate(-this.x + Math.sin(t * 118) * shake, -this.y + Math.cos(t * 92) * shake * 0.6);
     this.props(c, terrain, t, dive);
     this.terrain(c, image, terrain, t);
+    this.solidReefs(c, image, terrain, t);
     if (dive.zone) this.hunt(c, dive, t);
     else this.dream(c, dive, t);
     this.effects(c, dive);
@@ -193,9 +206,15 @@ export class OceanView {
         if (!this.visible({ x, y }, 250)) continue;
         this.atlas(c, this.landmarks, dive.map, x, y - width * 0.16, width, x % 2 ? 1 : -1, 0, 0.59);
       }
+      for (const decoration of reef.decorations ?? []) {
+        const { x, y, width, kind, alpha = 0.75 } = decoration;
+        if (this.visible({ x, y }, width * 0.6)) this.atlas(c, this.landmarks, DECOR[kind] ?? dive.map,
+          x, y - width * 0.19, width, Math.sin(x) < 0 ? -1 : 1, 0, alpha);
+      }
       if (dive.map === 2) return;
     }
-    const jellies = dive.zone && [3, 4].includes(dive.map) ? [420, 1570] : [260, 580, 922, 1290, 1632];
+    const jellies = dive.zone ? Array.from({length: Math.ceil(reef.width / 700)}, (_,i) => i * 700 + 360)
+      : [260, 580, 922, 1290, 1632];
     for (const [i, x] of jellies.entries()) {
       const y = roofAt(x, reef) + 69 + Math.sin(x + t * 1.6) * 12;
       if (this.visible({ x, y })) this.fish(c, 'jelly',
@@ -266,6 +285,29 @@ export class OceanView {
     this.kelp(c, reef, t);
   }
 
+  solidReefs(c, image, reef, t) {
+    const topFractions = [0.53,0.61,0.59,0.54,0.61];
+    for (const solid of reef.solids ?? []) {
+      const index = DECOR[solid.style] ?? 0;
+      const sprite = this.islands[index];
+      const top = topFractions[index];
+      const fullHeight = solid.ry * 2 / (1 - top);
+      const width = solid.rx * 2.07;
+      if (!this.visible(solid, Math.max(solid.rx, fullHeight) + 40)) continue;
+      const left = solid.x - width * 0.5;
+      const y = solid.y + solid.ry - fullHeight;
+      c.drawImage(sprite, left, y, width, fullHeight);
+      if (solid.style === 'vent') {
+        for (let i = 0; i < 3; i++) {
+          const phase = mod(t * 0.35 + i * 0.34, 1);
+          circle(c, solid.x + Math.sin(t + i) * 20, solid.y - solid.ry - phase * 75, 1.5 + phase * 3);
+          c.fillStyle = '#ffce81' + Math.round((1 - phase) * 115).toString(16).padStart(2,'0');
+          c.fill();
+        }
+      }
+    }
+  }
+
   kelp(c, reef, t) {
     for (const x of reef.kelp) {
       const y = floorAt(x, reef);
@@ -299,14 +341,14 @@ export class OceanView {
   }
 
   fish(c, kind, p, width, opacity = 1, t = 0) {
-    const index = FISH.indexOf(kind);
+    const index = FISH.indexOf(kind === 'abyss' ? 'nightmare' : kind);
     this.atlas(c, this.fauna, index, p.x, p.y, width, p.dir, Math.sin(t * 2 + p.x) * 0.045,
       opacity, 1 + Math.sin(t * 5.8 + p.x) * 0.042);
   }
 
   hero(c, dive, t) {
     const p = dive.player;
-    const width = 172 + 27 * (p.size - 1);
+    const width = 149 * Math.pow(p.size, 0.62);
     const bite = (dive.biteFlash ?? 0) / 0.23;
     const speed = Math.hypot(p.vx, p.vy);
     const singing = dive.singing || dive.charging;
@@ -379,7 +421,7 @@ export class OceanView {
         const tier = PREY[item.kind].tier;
         this.fish(c, item.kind, item, FISH_SIZE[tier], 1, t);
         if (tier > 0) {
-          const edible = tier <= game.stage || game.frenzyT > 0;
+          const edible = tier <= game.stage;
           circle(c, item.x, item.y + FISH_SIZE[tier] * 0.32, 2.3);
           c.fillStyle = edible ? '#93ffe5' : '#ff837d';
           c.fill();
@@ -394,29 +436,41 @@ export class OceanView {
         this.collectible(c, item, t);
       }
     }
-    for (const altar of zone.altars) this.altar(c, altar, t);
-    if (map > 0) this.portal(c, zone.back, true, MAPS[map - 1].short + ' ‹', t);
-    if (map < 4) this.portal(c, zone.gate, zone.unlocked, MAPS[map + 1].short + ' ›', t);
-    if (zone.key) {
-      this.collectible(c, { ...zone.key, kind: 'key' }, t);
-      label(c, '潮汐钥匙', zone.key.x, zone.key.y + 33, '#ffdc8e');
+    for (const predator of zone.predators) {
+      if (predator.timer || !this.visible(predator, 200)) continue;
+      const def = PREY[predator.kind];
+      const width = 112 + def.tier * 22;
+      this.fish(c, predator.kind, predator, width, predator.stun ? 0.65 : 1, t);
+      const color = def.tier <= game.stage ? '#b5ffe4' : '#ff9a96';
+      const text = predator.stun ? '鲸歌失衡' : predator.hunting ? '正在猎杀' : def.tier <= game.stage ? '可捕食' : '第' + (def.tier + 1) + '阶可捕食';
+      label(c, text, predator.x, predator.y - width * 0.34, color, 12);
     }
+    if (map > 0) this.portal(c, zone.back, true, MAPS[map - 1].short + ' ‹', t);
+    if (map < 4) this.portal(c, zone.gate, true, MAPS[map + 1].short + ' ›', t);
     const boss = zone.boss;
-    if (boss.hp > 0) {
+    if (boss.hp > 0 && this.visible(boss, 190)) {
       this.warning(c, boss);
-      const opacity = boss.attack?.skill === 'stealth' ? 0.4 : boss.invuln && Math.sin(t * 31) > 0 ? 0.62 : 1;
-      const striking = boss.attack?.age > 0.72;
+      const opacity = boss.attack?.skill === 'ambush' ? 0.4 : boss.invuln && Math.sin(t * 31) > 0 ? 0.62 : 1;
+      const striking = boss.attack && boss.attack.age > boss.attack.windup;
       animatedSprite(c, this.rivalSprites[RIVAL.indexOf(boss.def.key)], t * (striking ? 2.1 : 0.9), {
-        x: boss.x, y: boss.y + Math.sin(t * 3) * 4, width: 106 + map * 12, dir: boss.dir,
+        x: boss.x, y: boss.y + Math.sin(t * 3) * 4, width: 151 + map * 16, dir: boss.dir,
         tilt: boss.stun > 0 ? 0.24 : striking ? boss.dir * 0.35 : Math.sin(t * 3) * 0.056,
         alpha: opacity,
       });
-      label(c, boss.stun > 0 ? '定身 · 可追击' : boss.def.name, boss.x, boss.y - 60 - map * 6, boss.stun ? '#9cf4ff' : '#ffd8d5');
+      const opportunity = boss.recovery > 0 || boss.stun > 0;
+      label(c, opportunity ? '破绽 · 猛扑' : boss.def.name, boss.x, boss.y - 80 - map * 6, opportunity ? '#a2ffdf' : '#ffd8d5');
+      if (opportunity) {
+        c.beginPath();
+        c.arc(boss.x, boss.y, 64 + map * 8, -0.8, 0.8);
+        c.lineWidth = 3;
+        c.strokeStyle = '#8affc7b0';
+        c.stroke();
+      }
     }
     for (const h of game.hazards) this.hazard(c, h);
-    const nearby = zone.altars.find(a => !a.lit);
-    const destination = zone.unlocked ? zone.gate : zone.key ?? nearby ?? (boss.hp > 0 ? boss : null);
-    if (destination) this.guide(c, destination, nearby ? '海脉祭坛' : zone.key ? '潮汐钥匙' : zone.unlocked ? '潮汐海门' : boss.def.name);
+    if (boss.hp > 0 && Math.abs(boss.x - player.x) < 1250) {
+      this.guide(c, boss, '首领领地');
+    }
   }
 
   dream(c, game, t) {
@@ -486,23 +540,6 @@ export class OceanView {
     }
   }
 
-  altar(c, p, t) {
-    if (!this.visible(p)) return;
-    const color = p.lit ? '#89fae4' : '#bbc7f2';
-    const y = p.y + Math.sin(t * 2) * 4;
-    if (p.lit) {
-      circle(c, p.x, y - 8, 33 + Math.sin(t * 2) * 6);
-      c.strokeStyle = '#48ffd48a';
-      c.lineWidth = 1.4;
-      c.stroke();
-    }
-    c.save();
-    if (!p.lit) c.filter = 'saturate(0.45) brightness(0.68)';
-    this.atlas(c, this.loot, 4, p.x, y, 63);
-    c.restore();
-    label(c, p.lit ? '已共鸣' : '按住 F 唱鲸歌', p.x, p.y + 44, color, 12);
-  }
-
   portal(c, p, open, text, t) {
     if (!this.visible(p)) return;
     const color = open ? '#96fff0' : '#a5a6c9';
@@ -539,47 +576,84 @@ export class OceanView {
       return;
     }
     const [index, size] = LOOT[kind];
-    const motion = kind === 'key' ? Math.sin(t * 2) : 0;
-    this.atlas(c, this.loot, index, x, y + motion * 4, size, 1, motion * 0.19);
+    this.atlas(c, this.loot, index, x, y, size);
   }
 
   warning(c, boss) {
     const a = boss.attack;
-    if (!a || a.age >= 0.72) return;
+    if (!a) return;
+    const followup = a.skill === 'dash' && a.age >= a.windup && (a.age - a.windup) % 0.62 < 0.25;
+    if (a.age >= a.windup && !followup) return;
     c.save();
-    c.setLineDash([8, 6]);
-    c.globalAlpha = 0.45 + Math.sin(a.age * 23) * 0.3;
+    c.setLineDash([11, 6]);
+    c.globalAlpha = 0.6 + Math.sin(a.age * 21) * 0.25;
     if (a.skill === 'dash' || a.skill === 'plates') {
-      line(c, '#ff737f', 6, [boss.x, a.y, boss.x + a.dx * 490, a.y]);
+      const dx = a.dx * 690;
+      const dy = a.dy * 690;
+      line(c, '#ff7f8b', a.skill === 'dash' ? 15 : 3, [boss.x, boss.y, boss.x + dx, boss.y + dy]);
+      c.setLineDash([]);
+      for (const angle of a.skill === 'plates' ? [-0.4,0.4] : []) {
+        line(c, '#ff7f8b66', 2, [boss.x, boss.y, boss.x + dx * Math.cos(angle) - dy * Math.sin(angle),
+          boss.y + dx * Math.sin(angle) + dy * Math.cos(angle)]);
+      }
     } else if (a.skill === 'wave') {
-      circle(c, boss.x, boss.y, 55 + a.age * 58);
-      c.strokeStyle = '#ff737f';
+      circle(c, boss.x, boss.y, 52 + a.age * 58);
+      c.strokeStyle = '#ffad91';
       c.lineWidth = 3;
       c.stroke();
     } else {
-      const offsets = a.skill === 'stones' ? [-100, 0, 100] : [0];
-      c.strokeStyle = '#ff737f';
+      c.strokeStyle = '#ff8d9e';
       c.lineWidth = 3;
-      for (const dx of offsets) {
-        circle(c, a.x + dx, a.y, a.skill === 'stones' ? 25 : 57);
+      const marks = a.marks ?? [-2,-1,0,1,2].map(i => ({x:a.x + i * 111, y:a.y}));
+      for (const mark of marks) {
+        circle(c, mark.x, mark.y, a.skill === 'stones' ? 25 : 53);
+        c.stroke();
+        line(c, '#ff8d9e', 2, [mark.x - 10, mark.y, mark.x + 10, mark.y]);
+      }
+    }
+    c.restore();
+    label(c, a.title, boss.x, boss.y + 88, '#ffaeae');
+  }
+
+  hazard(c, h) {
+    if (!this.visible(h, h.radius + 30)) return;
+    const charging = h.age < h.delay;
+    c.save();
+    c.globalAlpha = charging ? 0.45 + Math.sin(h.age * 19) * 0.2 : 0.92;
+    c.strokeStyle = h.color;
+    c.lineWidth = 2.6;
+    if (h.kind === 'stone' && charging) {
+      line(c, h.color, 2, [h.x, h.y, h.x, h.targetY + 50]);
+      circle(c, h.x, h.targetY, 28);
+      c.stroke();
+    }
+    c.translate(h.x, h.y);
+    if (h.kind === 'plate') {
+      c.rotate(h.age * 9);
+      oval(c, 0, 0, h.radius * 1.4, h.radius * 0.55);
+      c.fillStyle = '#224676d9';
+      c.fill();
+      c.stroke();
+      oval(c, 0, 0, h.radius * 0.75, h.radius * 0.28);
+      c.stroke();
+    } else if (h.kind === 'ambush') {
+      for (const x of [-16, 0, 16]) line(c, h.color, 5, [x - 20,-38,x + 20,38]);
+      circle(c, 0, 0, h.radius);
+      c.lineWidth = 1;
+      c.stroke();
+    } else {
+      circle(c, 0, 0, h.radius);
+      c.stroke();
+      if (h.kind === 'stone') {
+        c.fillStyle = Math.sin(h.x) > 0 ? '#f3eeee' : '#282637';
+        c.fill();
+      } else {
+        circle(c, 0, 0, Math.max(1, h.radius - 7));
+        c.globalAlpha *= 0.35;
         c.stroke();
       }
     }
     c.restore();
-    label(c, boss.def.skillName, boss.x, boss.y + 61, '#ffaeae');
-  }
-
-  hazard(c, h) {
-    c.globalAlpha = h.age < h.delay ? 0.4 : 0.83;
-    circle(c, h.x, h.y, h.radius);
-    c.strokeStyle = h.color;
-    c.lineWidth = 3;
-    c.stroke();
-    if (h.kind !== 'wave') {
-      c.fillStyle = h.color + '3b';
-      c.fill();
-    }
-    c.globalAlpha = 1;
   }
 
   effects(c, dive) {

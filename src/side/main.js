@@ -5,6 +5,9 @@ import { TOTAL_TIME, START_INSOMNIA, clamp, displayTime, dist } from './core.js'
 import { DreamDive } from './dream.js';
 import { HuntDive } from './hunt.js';
 import { OceanView } from './view.js';
+import { regionAt } from './reefs.js';
+import { bossStatus } from './boss.js';
+import { drawSeaMap } from './sea-map.js';
 
 const $ = id => document.getElementById(id);
 const show = (id, visible) => $(id).classList.toggle('hidden', !visible);
@@ -51,12 +54,14 @@ function start(kind) {
   lastMap = -1;
   view.snap = true;
   hudTimer = 0;
+  $('seaChart').classList.remove('expanded');
   switchScreen('play');
   show('huntStats', kind === 'hunt');
   show('dreamStats', kind === 'dream');
   show('touchBite', kind === 'hunt');
+  show('btnReturn', kind === 'hunt');
   text('keyHelp', kind === 'hunt'
-    ? 'WASD / 方向键 游动  ·  J / 左键 猛扑  ·  F / 右键 鲸歌  ·  Shift 冲刺  ·  Esc 暂停'
+    ? 'WASD / 方向键 游动  ·  按住 J / 左键 猛扑  ·  F / 右键 鲸歌  ·  Shift 冲刺  ·  Tab 海图'
     : 'WASD / 方向键 游动  ·  按住 F / 左键 唱鲸歌  ·  Shift 冲刺  ·  Esc 暂停');
   renderHud();
 }
@@ -134,11 +139,12 @@ function endDream(result) {
 }
 
 function endHunt(result, by) {
-  const titles = { win: '深海之主', starve: '饿晕了', rival: '被撞晕了' };
+  const titles = { win: '深海之主', starve: '饿晕了', rival: '被撞晕了', return: '满载返航' };
   const notes = {
     win: '鲸宫的走廊又多了一幅画像。画里的大肥鱼手里还是那只饭碗。',
     starve: '大肥鱼在海底睡着了，梦里全是饭。下次记得边游边吃。',
-    rival: (by || '前辈') + '把你撞回了鲸宫。试试先用鲸歌定住首领，再猛扑。',
+    return: '把这次收集的珍珠带回鲸宫，准备下一次下潜。',
+    rival: (by || '前辈') + '把你撞回了鲸宫。先吃到对应体型，闪开预警后抓住收招破绽。',
   };
   setRank('heRank', result === 'win' ? 'S' : dive.stage >= 4 ? 'A' : dive.stage >= 2 ? 'B' : 'C');
   text('heTitle', titles[result]);
@@ -162,14 +168,15 @@ function renderHud() {
   const game = dive;
   if (!game) return;
   const hunt = !!game.zone;
-  text('runMap', hunt ? MAPS[game.map].short : '月光梦海');
+  const region = hunt ? regionAt(game.reef, game.player.x) : null;
+  text('runMap', hunt ? MAPS[game.map].short + ' · ' + region.name : '月光梦海');
   text('runNotice', game.messageT > 0 ? game.message : '');
   if (hunt) {
     const next = STAGES[game.stage + 1];
     const xp = STAGES[game.stage].xp;
-    const altarCount = game.zone.altars.filter(a => a.lit).length;
-    text('runObjective', game.map === 4 ? '击败 Claude 女仆长' : game.zone.unlocked ? '进入右侧潮汐海门 ›'
-      : game.zone.key ? '拾取潮汐钥匙' : '祭坛 ' + altarCount + '/2  ·  ' + (game.zone.boss.hp > 0 ? '挑战' + game.zone.boss.def.name : '首领已击败'));
+    const edible = Object.values(PREY).filter(prey => prey.tier <= game.stage).at(-1);
+    text('runObjective', '可捕食 ' + edible.name + ' · 击败首领 ' + game.clearedMaps.size + '/5');
+    drawSeaMap($('seaMap'), game);
     text('foodValue', Math.ceil(game.hunger) + ' / 100');
     fill('foodBar', game.hunger / 100);
     text('healthValue', Math.ceil(game.hp) + ' / ' + Math.ceil(game.maxHp));
@@ -184,9 +191,11 @@ function renderHud() {
     fill('frenzyBar', game.frenzyT > 0 ? game.frenzyT / 9 : game.frenzy / 100);
     text('songText', game.songCd > 0 ? '鲸歌 ' + game.songCd.toFixed(1) + ' 秒' : '按住 F 蓄力');
     const boss = game.zone.boss;
-    show('bossStatus', boss.hp > 0 && dist(boss, game.player) < 370);
+    show('bossStatus', boss.hp > 0 && boss.engaged && dist(boss, game.player) < 1100);
     text('bossName', boss.def.name);
-    fill('bossBar', boss.hp / boss.def.hp);
+    fill('bossBar', boss.hp / boss.maxHp);
+    text('bossHint', bossStatus(game));
+    show('seaChart', true);
     show('songPulse', game.charging);
     fill('chargeBar', game.songCharge / 1.8);
   } else {
@@ -198,6 +207,7 @@ function renderHud() {
     fill('breathBar', game.breath / 100);
     fill('dreamProgress', 1 - game.insomnia / START_INSOMNIA);
     show('bossStatus', false);
+    show('seaChart', false);
     show('songPulse', false);
   }
   fill('dashBar', game.player.dash / 100);
@@ -216,6 +226,12 @@ $('btnDreamMenu').addEventListener('click', toTitle);
 $('btnPause').addEventListener('click', pause);
 $('btnResume').addEventListener('click', pause);
 $('btnPauseMenu').addEventListener('click', toTitle);
+$('btnReturn').addEventListener('click', () => {
+  if (!dive?.zone) return;
+  audio.suspend(false);
+  dive.finish('return');
+});
+$('btnMap').addEventListener('click', () => $('seaChart').classList.toggle('expanded'));
 $('metaUpg').addEventListener('click', event => {
   const key = event.target.closest('[data-k]')?.dataset.k;
   if (!key || !meta.buy(key)) return;
@@ -227,6 +243,10 @@ $('metaUpg').addEventListener('click', event => {
 addEventListener('keydown', event => {
   const { code } = event;
   if (code === 'Escape' && !event.repeat) pause();
+  if (code === 'Tab' && screen === 'play' && dive?.zone) {
+    event.preventDefault();
+    if (!event.repeat) $('seaChart').classList.toggle('expanded');
+  }
   if (code === 'KeyM' && !event.repeat) {
     audio.setMuted(!audio.muted);
     text('muteTag', audio.muted ? '已静音' : '');

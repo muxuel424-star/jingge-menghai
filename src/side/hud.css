@@ -82,3 +82,29 @@ button:focus-visible { outline: 2px solid #a5f8ff; outline-offset: 3px; }
   #runNotice { bottom: 147px; }
   #songPulse { bottom: 184px; }
 }
+
+#regionCard { max-width: min(405px, 41vw); }
+#runMap { font-size: 14px; }
+#bossHint { display: block; margin-top: 5px; color: #ffd5ab; font-size: 11px; }
+#seaChart {
+  position: absolute; bottom: 32px; right: 20px; width: 245px; padding: 7px 8px;
+  border: 1px solid #87b6d24f; background: #071729e8; border-radius: 12px;
+  box-shadow: 0 6px 24px #0005; pointer-events: auto;
+}
+#seaChart canvas { display: block; width: 100%; height: auto; border-radius: 5px; }
+#btnMap { background: none; color: #bcdde8; border: none; padding: 1px 0 6px; font: 12px var(--sans); width: 100%; text-align: left; }
+.chartLegend { font-size: 10px; color: #aac6d2; }
+#seaChart.expanded { width: min(840px, 90vw); right: 50%; bottom: 25%; transform: translateX(50%); }
+#seaChart.expanded #btnMap { font-size: 16px; padding: 3px 0 10px; }
+#seaChart.expanded .chartLegend { font-size: 12px; }
+@media (max-width: 690px) {
+  #seaChart { right: 8px; bottom: 87px; width: 158px; padding: 5px; }
+  #seaChart .chartLegend { display: none; }
+  #regionCard { max-width: calc(100vw - 164px); }
+  #runMap { font-size: 12px; }
+  #bossStatus { width: 152px; max-width: calc(100vw - 164px); }
+}
+@media (pointer: coarse) {
+  #seaChart { bottom: 90px; }
+  #seaChart.expanded { bottom: 25%; }
+}
