@@ -1,6 +1,7 @@
 import { MAPS, PREY } from '../ocean-data.js';
 import { TAU, clamp } from './core.js';
 import { DREAM_REEF, floorAt, roofAt, regionAt } from './reefs.js';
+import { EQUIPMENT } from './equipment.js';
 import { HERO_POSES, animatedSprite, prepareRivals, prepareSwimmer } from './swim-animation.js';
 import swimmer from '../../assets/side/swimmer.webp';
 import reef from '../../assets/side/reef.webp';
@@ -22,6 +23,7 @@ import wreckIsland from '../../assets/side/island-wreck.webp';
 import crystalIsland from '../../assets/side/island-crystal.webp';
 import ventIsland from '../../assets/side/island-vent.webp';
 import boneIsland from '../../assets/side/island-bone.webp';
+import equipmentImage from '../../assets/side/equipment.webp';
 
 const FISH = ['fry', 'lantern', 'manta', 'royal', 'nightmare', 'jelly'];
 const FISH_SIZE = [26, 48, 85, 94, 89, 74];
@@ -79,14 +81,15 @@ export class OceanView {
   }
 
   async load() {
-    const [body, dash, bite, sing, hurt, rivalsAtlas, dream, fish, landmarksAtlas, lootAtlas, ...backgrounds] = await Promise.all(
-      [swimmer, dashImage, biteImage, singImage, hurtImage, rivals, reef, fauna, landmarks, loot, bay, porcelain, violet, magma, sanctuary, coralIsland, wreckIsland, crystalIsland, ventIsland, boneIsland].map(load));
+    const [body, dash, bite, sing, hurt, rivalsAtlas, dream, fish, landmarksAtlas, lootAtlas, equipmentAtlas, ...backgrounds] = await Promise.all(
+      [swimmer, dashImage, biteImage, singImage, hurtImage, rivals, reef, fauna, landmarks, loot, equipmentImage, bay, porcelain, violet, magma, sanctuary, coralIsland, wreckIsland, crystalIsland, ventIsland, boneIsland].map(load));
     this.swimmer = prepareSwimmer(body, { dash, bite, sing, hurt });
     this.rivalSprites = prepareRivals(rivalsAtlas);
     this.dreamBackground = dream;
     this.fauna = fish;
     this.landmarks = landmarksAtlas;
     this.loot = lootAtlas;
+    this.equipmentAtlas = equipmentAtlas;
     this.backgrounds = backgrounds.slice(0,5);
     this.islands = backgrounds.slice(5);
   }
@@ -150,7 +153,10 @@ export class OceanView {
     this.props(c, terrain, t, dive);
     this.terrain(c, image, terrain, t);
     this.solidReefs(c, image, terrain, t);
-    if (dive.zone) this.hunt(c, dive, t);
+    if (dive.zone) {
+      this.environment(c, dive, t);
+      this.hunt(c, dive, t);
+    }
     else this.dream(c, dive, t);
     this.effects(c, dive);
     this.hero(c, dive, t);
@@ -288,6 +294,10 @@ export class OceanView {
   solidReefs(c, image, reef, t) {
     const topFractions = [0.53,0.61,0.59,0.54,0.61];
     for (const solid of reef.solids ?? []) {
+      if (solid.points) {
+        this.formation(c, solid, reef);
+        continue;
+      }
       const index = DECOR[solid.style] ?? 0;
       const sprite = this.islands[index];
       const top = topFractions[index];
@@ -304,6 +314,141 @@ export class OceanView {
           c.fillStyle = '#ffce81' + Math.round((1 - phase) * 115).toString(16).padStart(2,'0');
           c.fill();
         }
+      }
+    }
+  }
+
+  formation(c, solid, reef) {
+    if (!this.visible(solid, Math.max(solid.rx,solid.ry)+80)) return;
+    const { left, right, top, bottom } = solid.aabb;
+    const image = this.islands[DECOR[solid.style] ?? 0];
+    const path = () => {
+      c.beginPath();
+      solid.points.forEach((p,i) => i ? c.lineTo(p.x,p.y) : c.moveTo(p.x,p.y));
+      c.closePath();
+    };
+    c.save();
+    path();
+    c.fillStyle = solid.style === 'bone' ? '#a29c7b' : solid.style === 'wreck' ? '#403c49' : reef.ground;
+    c.fill();
+    c.clip();
+    for (let x = left; x < right; x += 150) {
+      for (let y = top; y < bottom; y += 96) {
+        c.drawImage(image,image.width*0.17,image.height*0.67,image.width*0.68,image.height*0.30,x,y,151,97);
+      }
+    }
+    const shadow=c.createLinearGradient(left,top,left,bottom);
+    shadow.addColorStop(0,reef.light+'25');
+    shadow.addColorStop(1,'#071126a0');
+    c.fillStyle=shadow;
+    c.fillRect(left,top,right-left,bottom-top);
+    c.restore();
+    path();
+    c.strokeStyle=solid.style==='bone' ? '#eadcaf9a' : reef.light+'7c';
+    c.lineWidth=2.6;
+    c.stroke();
+  }
+
+  environment(c, game, t) {
+    for (const f of game.zone.features) {
+      const margin = Math.max(f.rx, f.ry*2) + 70;
+      if (!this.visible(f,margin)) continue;
+      const warning=f.state==='warning';
+      const active=f.state==='active';
+      const color=warning ? '#ffd89b' : game.reef.light;
+      c.save();
+      c.globalAlpha=active ? 0.86 : warning ? 0.58+Math.sin(t*17)*0.16 : 0.22;
+      c.strokeStyle=color;
+      c.lineWidth=2;
+      if (warning) c.setLineDash([8,6]);
+      if (f.kind==='fallingDebris' || f.kind==='sluice') {
+        if (warning && f.kind==='fallingDebris') {
+          line(c,'#ffc7a0',2,[f.originX,f.originY,f.originX,f.originY+330]);
+          oval(c,f.originX,f.originY+330,45,13);
+          c.stroke();
+        }
+        c.translate(f.x,f.y);
+        c.rotate(f.kind==='sluice' ? f.sway ?? 0 : f.progress*0.45);
+        c.fillStyle='#5a4d4c';
+        c.fillRect(-f.rx,-f.ry,f.rx*2,f.ry*2);
+        c.strokeRect(-f.rx,-f.ry,f.rx*2,f.ry*2);
+        c.setLineDash([]);
+        line(c,'#b1986f',2,[-f.rx*0.6,-f.ry*0.9,-f.rx*0.5,f.ry*0.9]);
+        line(c,'#a3b9c4',2,[-f.rx,0,f.rx,0]);
+      } else if (f.kind==='lightGate') {
+        const gap=f.gapY ?? f.y;
+        const half=f.gapHalf ?? 85;
+        c.fillStyle=active ? '#fff0ae8f' : '#fae3a92b';
+        const high=f.y-f.ry;
+        const low=f.y+f.ry;
+        for (const [y0,y1] of [[high,gap-half],[gap+half,low]]) {
+          c.fillRect(f.x-f.rx,y0,f.rx*2,Math.max(0,y1-y0));
+          line(c,'#fff1c2',3,[f.x,y0,f.x,y1]);
+        }
+        c.strokeStyle='#a0ffdf';
+        c.setLineDash([]);
+        oval(c,f.x,gap,25,half);
+        c.stroke();
+      } else if (f.kind==='eruption') {
+        const high=f.originY-f.ry*2;
+        c.fillStyle=active ? '#ff824739' : '#ff824712';
+        c.fillRect(f.x-f.rx,high,f.rx*2,f.ry*2);
+        if (active) {
+          for (let i=0;i<12;i++) {
+            const a=mod(t*1.4+i/12,1);
+            circle(c,f.x+Math.sin(i*2.7+t)*f.rx*0.58,f.originY-a*f.ry*2,3+(1-a)*6);
+            c.fillStyle=i%2 ? '#ffcf86' : '#f68964';
+            c.fill();
+          }
+        }
+        c.strokeStyle='#ffbc89';
+        c.strokeRect(f.x-f.rx,high,f.rx*2,f.ry*2);
+      } else if (f.kind==='steamJet') {
+        c.strokeRect(f.x-f.rx,f.y-f.ry,f.rx*2,f.ry*2);
+        for (let i=0;i<8;i++) {
+          const a=mod(t*1.2+i/8,1);
+          oval(c,f.x-f.rx+a*f.rx*2,f.y+Math.sin(a*9)*f.ry*0.5,4+a*11,4+a*6);
+          c.stroke();
+        }
+      } else if (f.kind==='whirlpool' || f.kind==='pulseLane') {
+        c.setLineDash([]);
+        const radius=f.kind==='pulseLane' && active ? f.radius : f.rx;
+        if (f.kind==='pulseLane') {
+          circle(c,f.x,f.y,Math.max(3,radius));
+          c.lineWidth=active ? 4 : 1.5;
+          c.stroke();
+          circle(c,f.x,f.y,Math.max(3,radius-9));
+          c.globalAlpha*=0.4;
+          c.stroke();
+        } else {
+          for (let i=0;i<4;i++) {
+            c.beginPath();
+            for (let j=0;j<=28;j++) {
+              const a=t*(active ? 2.4 : 0.6)+i*TAU/4+j*0.11;
+              const r=f.rx*(0.12+j/33);
+              const x=f.x+Math.cos(a)*r;
+              const y=f.y+Math.sin(a)*r*0.85;
+              if(j) c.lineTo(x,y); else c.moveTo(x,y);
+            }
+            c.stroke();
+          }
+        }
+      } else {
+        oval(c,f.x,f.y,f.rx,f.ry);
+        c.stroke();
+        c.setLineDash([]);
+        const dx=(f.dx ?? 0)*(f.kind==='surge' && Math.floor(f.age/f.period)%2 ? -1 : 1);
+        const dy=f.dy ?? -1;
+        for (let i=0;i<10;i++) {
+          const a=mod(t*0.9+i/10,1)-0.5;
+          const x=f.x+a*f.rx*dx*1.6+Math.sin(i*4)*f.rx*0.25;
+          const y=f.y+a*f.ry*dy*1.6+Math.cos(i*4)*f.ry*0.25;
+          line(c,color,1.8,[x-dx*12,y-dy*12,x+dx*12,y+dy*12]);
+        }
+      }
+      c.restore();
+      if ((active || warning) && Math.hypot(game.player.x-f.x,game.player.y-f.y)<500) {
+        label(c,f.label+(warning ? ' · 预警' : ''),f.x,f.kind==='eruption' ? f.originY-f.ry*2-18 : f.y-f.ry-15,color,12);
       }
     }
   }
@@ -342,13 +487,87 @@ export class OceanView {
 
   fish(c, kind, p, width, opacity = 1, t = 0) {
     const index = FISH.indexOf(kind === 'abyss' ? 'nightmare' : kind);
-    this.atlas(c, this.fauna, index, p.x, p.y, width, p.dir, Math.sin(t * 2 + p.x) * 0.045,
-      opacity, 1 + Math.sin(t * 5.8 + p.x) * 0.042);
+    const phase=p.phase ?? p.x;
+    const speed=Math.hypot(p.vx ?? 0,p.vy ?? 0);
+    const wing=kind==='manta' ? 0.16 : kind==='fry' && p.panic>0 ? 0.08 : 0.038;
+    const frequency=kind==='manta' ? 4.8 : kind==='fry' ? 12 : 5.8;
+    const tilt=kind==='manta' ? Math.sin(t*2+phase)*0.12 : Math.sin(t*2+phase)*0.045;
+    this.atlas(c, this.fauna, index, p.x, p.y, width, p.dir,tilt,
+      opacity,1+Math.sin(t*frequency+phase)*wing*Math.min(1.2,0.6+speed/140));
+  }
+
+  fishSignals(c,fish,width,game,t) {
+    if (fish.glow>0.4 && fish.kind==='lantern') {
+      const glow=c.createRadialGradient(fish.x+fish.dir*width*0.22,fish.y-width*0.16,1,fish.x,fish.y,width*0.69);
+      glow.addColorStop(0,'#ffdc9a'+Math.round(fish.glow*105).toString(16).padStart(2,'0'));
+      glow.addColorStop(1,'#ffd78a00');
+      c.fillStyle=glow;
+      c.fillRect(fish.x-width,fish.y-width,width*2,width*2);
+    }
+    const action=fish.action;
+    c.save();
+    c.lineWidth=1.7;
+    c.strokeStyle=fish.kind==='lantern' ? '#ffe2a3' : fish.kind==='royal' ? '#ffc299' : '#c7c3ff';
+    if (fish.tellT>0) {
+      c.setLineDash([6,4]);
+      if (action==='charge' || action==='lungeTell') {
+        line(c,'#ff9c9c',4,[fish.x,fish.y,fish.x+fish.aimX*250,fish.y+fish.aimY*250]);
+      } else {
+        circle(c,fish.x,fish.y,fish.pulseRadius || width*0.68);
+        c.stroke();
+      }
+    }
+    c.setLineDash([]);
+    if (action==='suction' && fish.stateT>0.95) {
+      for (let i=0;i<7;i++) {
+        const phase=1-mod(t*2+i/7,1);
+        const side=Math.sin(i*4)*phase*74;
+        const x=fish.x+fish.aimX*phase*195-fish.aimY*side;
+        const y=fish.y+fish.aimY*phase*195+fish.aimX*side;
+        line(c,'#b6bdff99',2,[x+fish.aimX*20,y+fish.aimY*20,x,y]);
+      }
+    }
+    if (action==='vortex' && fish.stateT>0.72) {
+      for (let i=0;i<3;i++) {
+        c.beginPath();
+        c.arc(fish.x,fish.y,46+i*25,t*3+i,t*3+i+Math.PI*1.3);
+        c.stroke();
+      }
+    }
+    if (fish.kind==='royal') {
+      c.beginPath();
+      c.ellipse(fish.x+fish.dir*width*0.22,fish.y,width*0.22,width*0.29,0,
+        fish.dir>0 ? -1.2 : Math.PI-1.2,fish.dir>0 ? 1.2 : Math.PI+1.2);
+      c.strokeStyle=fish.armored ? '#deedffb0' : '#9dffd266';
+      c.lineWidth=fish.armored ? 3 : 1.3;
+      c.stroke();
+    }
+    c.restore();
+    if (Math.hypot(fish.x-game.player.x,fish.y-game.player.y)<210 && fish.kind!=='fry') {
+      const tips={flash:'闪光蓄势 · 拉开距离',vortex:'涡流',charge:'冲撞蓄势',rush:'冲撞',suction:'吸食 · 侧向逃离',
+        lungeTell:'巨口突袭',lunge:'巨口突袭',guard:'正面护甲 · 绕后',recover:'破绽',lurk:'埋伏',evade:'高速闪避'};
+      const tip=tips[action];
+      if(tip) label(c,tip,fish.x,fish.y-width*0.39,'#ffe1ba',11);
+    }
   }
 
   hero(c, dive, t) {
     const p = dive.player;
     const width = 149 * Math.pow(p.size, 0.62);
+    if (dive.equipment?.shield) {
+      oval(c,p.x-10*p.dir,p.y,65+14*p.size,48+8*p.size);
+      c.strokeStyle='#acecff8c';
+      c.lineWidth=2.4;
+      c.stroke();
+    }
+    if (dive.equipment?.magnet) {
+      c.setLineDash([5,13]);
+      circle(c,p.x,p.y,142+Math.sin(t*2)*8);
+      c.strokeStyle='#86ffd952';
+      c.lineWidth=1.4;
+      c.stroke();
+      c.setLineDash([]);
+    }
     const bite = (dive.biteFlash ?? 0) / 0.23;
     const speed = Math.hypot(p.vx, p.vy);
     const singing = dive.singing || dive.charging;
@@ -419,6 +638,7 @@ export class OceanView {
       if (item.timer > 0) continue;
       if (PREY[item.kind]) {
         const tier = PREY[item.kind].tier;
+        this.fishSignals(c,item,FISH_SIZE[tier],game,t);
         this.fish(c, item.kind, item, FISH_SIZE[tier], 1, t);
         if (tier > 0) {
           const edible = tier <= game.stage;
@@ -440,10 +660,28 @@ export class OceanView {
       if (predator.timer || !this.visible(predator, 200)) continue;
       const def = PREY[predator.kind];
       const width = 112 + def.tier * 22;
+      this.fishSignals(c,predator,width,game,t);
       this.fish(c, predator.kind, predator, width, predator.stun ? 0.65 : 1, t);
       const color = def.tier <= game.stage ? '#b5ffe4' : '#ff9a96';
       const text = predator.stun ? '鲸歌失衡' : predator.hunting ? '正在猎杀' : def.tier <= game.stage ? '可捕食' : '第' + (def.tier + 1) + '阶可捕食';
       label(c, text, predator.x, predator.y - width * 0.34, color, 12);
+    }
+    for (const item of zone.pickups) {
+      if(item.timer || !this.visible(item,65)) continue;
+      const spec=EQUIPMENT[item.kind];
+      const y=item.y+Math.sin(t*2.3+item.x)*5;
+      circle(c,item.x,y,29);
+      c.fillStyle=spec.color+'12';
+      c.fill();
+      this.atlas(c,this.equipmentAtlas,spec.index,item.x,y,53);
+      if (Math.hypot(item.x-player.x,item.y-player.y)<165 || game.equipment.sonar) {
+        label(c,spec.name,item.x,y-34,spec.color,12);
+      }
+    }
+    if(game.equipment.sonar){
+      const targets=[...zone.pickups.filter(item=>!item.timer),...zone.things.filter(item=>item.kind==='chest'&&!item.timer)];
+      targets.sort((a,b)=>Math.hypot(a.x-player.x,a.y-player.y)-Math.hypot(b.x-player.x,b.y-player.y));
+      if(targets[0]) this.guide(c,targets[0],targets[0].kind==='chest' ? '宝箱' : '补给');
     }
     if (map > 0) this.portal(c, zone.back, true, MAPS[map - 1].short + ' ‹', t);
     if (map < 4) this.portal(c, zone.gate, true, MAPS[map + 1].short + ' ›', t);

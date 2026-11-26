@@ -8,6 +8,7 @@ import { OceanView } from './view.js';
 import { regionAt } from './reefs.js';
 import { bossStatus } from './boss.js';
 import { drawSeaMap } from './sea-map.js';
+import { equipmentText } from './equipment.js';
 
 const $ = id => document.getElementById(id);
 const show = (id, visible) => $(id).classList.toggle('hidden', !visible);
@@ -177,6 +178,8 @@ function renderHud() {
     const edible = Object.values(PREY).filter(prey => prey.tier <= game.stage).at(-1);
     text('runObjective', '可捕食 ' + edible.name + ' · 击败首领 ' + game.clearedMaps.size + '/5');
     drawSeaMap($('seaMap'), game);
+    text('equipmentStatus', equipmentText(game));
+    show('equipmentStatus', true);
     text('foodValue', Math.ceil(game.hunger) + ' / 100');
     fill('foodBar', game.hunger / 100);
     text('healthValue', Math.ceil(game.hp) + ' / ' + Math.ceil(game.maxHp));
@@ -188,7 +191,7 @@ function renderHud() {
     text('runPearls', game.pearls);
     text('combo', game.combo >= 2 ? game.combo + ' 连吞' : '');
     text('frenzyText', game.frenzyT > 0 ? '狂食 ' + game.frenzyT.toFixed(1) + ' 秒' : '狂食蓄积');
-    fill('frenzyBar', game.frenzyT > 0 ? game.frenzyT / 9 : game.frenzy / 100);
+    fill('frenzyBar', game.frenzyT > 0 ? game.frenzyT / 7 : game.frenzy / 100);
     text('songText', game.songCd > 0 ? '鲸歌 ' + game.songCd.toFixed(1) + ' 秒' : '按住 F 蓄力');
     const boss = game.zone.boss;
     show('bossStatus', boss.hp > 0 && boss.engaged && dist(boss, game.player) < 1100);
@@ -208,6 +211,7 @@ function renderHud() {
     fill('dreamProgress', 1 - game.insomnia / START_INSOMNIA);
     show('bossStatus', false);
     show('seaChart', false);
+    show('equipmentStatus', false);
     show('songPulse', false);
   }
   fill('dashBar', game.player.dash / 100);

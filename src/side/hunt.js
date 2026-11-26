@@ -1,7 +1,10 @@
 import { MAPS, PREY, RIVALS, STAGES } from '../ocean-data.js';
-import { Dive, clamp, dist, moveToward, rand } from './core.js';
+import { Dive, clamp, dist, rand } from './core.js';
 import { REEFS, floorAt, roofAt, resolveTerrain, regionAt } from './reefs.js';
 import { createBoss, updateBoss, singAtBoss } from './boss.js';
+import { createFish, updateFish } from './ecology.js';
+import { createEquipment, collectEquipment, shieldHit, updateEquipment } from './equipment.js';
+import { createHabitat, updateHabitat } from './habitat.js';
 
 const CHARGE = 0.9;
 const COMBO_TIME = 2.8;
@@ -27,6 +30,7 @@ export class HuntDive extends Dive {
     this.biteCd = this.biteFlash = this.songCd = this.songCharge = this.transition = 0;
     this.charging = this.singHeld = this.biteHeld = false;
     this.hazards = [];
+    this.equipment = createEquipment();
     this.locations = [];
     this.visitedMaps = new Set();
     this.clearedMaps = new Set();
@@ -46,7 +50,7 @@ export class HuntDive extends Dive {
       for (let j = 0; j < shoal.count; j++) {
         const x = shoal.x + j * 13 - (shoal.count - 1) * 6;
         const y = swimY(x, shoal.y + Math.sin(j * 1.55) * 27 + rand(-7, 7));
-        const fish = { kind: shoal.kind, x, y, timer: 0, baseX: x, baseY: y, phase: rand(0, 6.28), dir: 1 };
+        const fish = createFish(shoal.kind, x, y, { schoolX: shoal.x, schoolY: shoal.y, member: j });
         resolveTerrain(fish, 14, reef);
         fish.baseX = fish.x;
         fish.baseY = fish.y;
@@ -63,14 +67,14 @@ export class HuntDive extends Dive {
     for (const [x, y, dx, dy] of reef.currents) put('current', x, y, { dx, dy });
     for (const [x, y] of reef.jellies ?? []) put('jelly', x, y, { phase: rand(0, 6.28) });
     put('salary', ...reef.salary);
-    const predators = (reef.predators ?? []).map((point, i) => ({
-      ...point, kind: point.kind ?? 'royal', homeX: point.x, homeY: point.y,
-      dir: i % 2 ? -1 : 1, timer: 0, stun: 0, phase: i * 2.7, hunting: false,
-    }));
+    const predators = (reef.predators ?? []).map((point, i) =>
+      createFish(point.kind, point.x, point.y, { predator: true, dir: i % 2 ? -1 : 1 }));
     const def = RIVALS[index];
     return {
       things,
       predators,
+      pickups: (reef.pickups ?? []).map(item => ({ ...item, timer: 0 })),
+      features: createHabitat(reef),
       back: point(reef.back),
       gate: point(reef.gate),
       boss: createBoss(def, point(reef.boss)),
@@ -86,7 +90,7 @@ export class HuntDive extends Dive {
     this.zone = this.locations[index] ??= this.buildMap(index);
     this.visitedMaps.add(index);
     const away = Math.max(0, this.time - this.zone.lastTime);
-    for (const entity of [...this.zone.things, ...this.zone.predators]) entity.timer = Math.max(0, entity.timer - away);
+    for (const entity of [...this.zone.things, ...this.zone.predators, ...this.zone.pickups]) entity.timer = Math.max(0, entity.timer - away);
     this.zone.lastTime = this.time;
     const [x, y] = direction < 0 ? [this.reef.gate[0] - 140, this.reef.gate[1]] : this.reef.spawn;
     Object.assign(this.player, { x, y, vx: 0, vy: 0, dir: direction });
@@ -106,8 +110,9 @@ export class HuntDive extends Dive {
       cleanStage: stats.bites ? 0 : this.stage, win: this.won ? 1 : 0 };
   }
 
-  eat(xp, food, target, color, label = '') {
+  eat(xp, food, target, color, label = '', kind = target.kind ?? 'boss') {
     this.combo++;
+    this.audio.consume?.(kind, this.combo, (PREY[kind]?.tier ?? 0) >= 2);
     this.comboT = COMBO_TIME;
     this.stats.maxCombo = Math.max(this.stats.maxCombo, this.combo);
     const multiplier = Math.min(4, 1 + Math.floor(this.combo / 4) * 0.25) * (this.frenzyT > 0 ? 2 : 1);
@@ -156,6 +161,7 @@ export class HuntDive extends Dive {
   hurt(amount, target, name) {
     const p = this.player;
     if (p.invuln > 0 || this.frenzyT > 0 || this.ended) return false;
+    if (shieldHit(this)) return false;
     this.hp = Math.max(0, this.hp - amount);
     p.invuln = 1;
     p.vx = Math.sign(p.x - target.x || -p.dir) * 230;
@@ -164,14 +170,22 @@ export class HuntDive extends Dive {
     this.shake = 8;
     this.damage = 1;
     this.settleCombo();
-    this.audio.hit();
+    this.audio.playerHurt?.(name);
     this.effect(p, { type: 'food', text: '生命 −' + amount, color: '#ffa6a5' });
     if (this.hp <= 0) this.finish('rival', name);
     return true;
   }
 
   update(dt, input) {
+    this.player.speed = STAGES[this.stage].speed * this.mod.speed * (this.equipment.haste > 0 ? 1.32 : 1);
     this.updateMovement(dt, input, this.charging);
+    updateEquipment(this, dt);
+    updateHabitat(this, dt);
+    if (this.ended) return;
+    for (const item of this.zone.pickups) {
+      item.timer = Math.max(0, item.timer - dt);
+      if (!item.timer && this.touches(item, 15)) collectEquipment(this, item);
+    }
     this.transition = Math.max(0, this.transition - dt);
     this.biteCd = Math.max(0, this.biteCd - dt);
     this.biteFlash = Math.max(0, this.biteFlash - dt);
@@ -274,24 +288,18 @@ export class HuntDive extends Dive {
       if (Math.abs(item.x - player.x) > 1200 || Math.abs(item.y - player.y) > 850) continue;
       const prey = PREY[item.kind];
       if (prey) {
-        const phase = this.time * (0.85 + prey.tier * 0.08) + item.phase;
-        item.x = item.baseX + Math.sin(phase) * (prey.tier ? 45 : 30);
-        item.y = item.baseY + Math.cos(phase * 0.81) * 15;
-        const separation = dist(player, item);
-        const avoid = prey.tier <= this.stage && separation < 124;
-        const away = Math.sign(item.x - player.x || 1);
-        item.scare = (item.scare || 0) * Math.exp(-2.2 * dt) + (avoid ? away * dt * 55 : 0);
-        item.x += item.scare;
-        resolveTerrain(item, 12 + prey.tier * 2, this.reef);
-        item.dir = avoid && Math.abs(item.scare) > 9 ? away : Math.cos(phase) < 0 ? -1 : 1;
+        const rule = updateFish(this, item, dt);
+        if (this.ended) return;
         if (!this.touches(item, 8 + prey.tier * 5)) continue;
-        if (prey.tier > this.stage) {
+        if (!rule.edible) {
           this.hurt(prey.dmg, item, prey.name);
           continue;
         }
+        if (rule.blocked) continue;
         item.timer = prey.tier ? 18 : 12;
+        item.ecologyReset = true;
         this.stats.kind[item.kind]++;
-        this.eat(prey.xp, prey.food, item, PALETTES[prey.tier]);
+        this.eat(Math.round(prey.xp * rule.bonus), prey.food, item, PALETTES[prey.tier]);
         continue;
       }
       if (item.kind === 'geyser') {
@@ -350,36 +358,18 @@ export class HuntDive extends Dive {
     const p = this.player;
     for (const predator of this.zone.predators) {
       predator.timer = Math.max(0, predator.timer - dt);
-      predator.stun = Math.max(0, predator.stun - dt);
-      if (predator.timer || Math.abs(predator.x - p.x) > 1150) continue;
+      if (predator.timer || Math.abs(predator.x - p.x) > 1150 || Math.abs(predator.y - p.y) > 850) continue;
       const def = PREY[predator.kind];
-      const danger = def.tier > this.stage;
-      const separation = dist(p, predator);
-      predator.hunting = danger && separation < 345 && !p.hidden;
-      const flee = !danger && separation < 210;
-      const home = {
-        x: predator.homeX + Math.sin(this.time * 0.45 + predator.phase) * 160,
-        y: predator.homeY + Math.cos(this.time * 0.57 + predator.phase) * 80,
-      };
-      let target = home;
-      if (predator.hunting) target = p;
-      if (flee) target = { x: predator.x + Math.sign(predator.x - p.x || 1) * 180, y: predator.y - 12 };
-      if (!predator.stun) moveToward(predator, target, predator.hunting ? 173 + def.tier * 9 : flee ? 145 : 68, dt);
-      if (dist(predator, { x: predator.homeX, y: predator.homeY }) > 650) {
-        moveToward(predator, home, 210, dt);
-        predator.hunting = false;
-      }
-      resolveTerrain(predator, 25 + def.tier * 5, this.reef);
+      const rule = updateFish(this, predator, dt, { predator: true });
+      if (this.ended) return;
       if (!this.touches(predator, 24 + def.tier * 6)) continue;
-      if (danger) {
+      if (!rule.edible) {
         this.hurt(def.dmg + 8, predator, def.name);
-      } else {
+      } else if (!rule.blocked) {
         predator.timer = 48;
-        predator.x = predator.homeX;
-        predator.y = predator.homeY;
+        predator.ecologyReset = true;
         this.stats.kind[predator.kind]++;
-        this.eat(def.xp * 2, def.food, predator, PALETTES[def.tier], def.name);
-        this.audio.crunch();
+        this.eat(Math.round(def.xp * 2 * rule.bonus), def.food, predator, PALETTES[def.tier], def.name);
       }
     }
   }

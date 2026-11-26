@@ -21,11 +21,92 @@ export function roofAt(x, reef) {
   return reef.roof ? heightAt(reef.roof, x) : 51;
 }
 
-// Ellipses are expanded by the swimmer's radius, leaving the drawn reef solid.
+function closestEdge(points, x, y) {
+  let nearest = null;
+  let inside = false;
+  for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+    const a = points[j];
+    const b = points[i];
+    if ((a.y > y) !== (b.y > y) && x < (b.x - a.x) * (y - a.y) / (b.y - a.y) + a.x) inside = !inside;
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const fraction = clamp(((x - a.x) * dx + (y - a.y) * dy) / Math.max(1e-9, dx * dx + dy * dy), 0, 1);
+    const px = a.x + dx * fraction;
+    const py = a.y + dy * fraction;
+    const distance = Math.hypot(x - px, y - py);
+    if (!nearest || distance < nearest.distance) nearest = { x: px, y: py, distance, dx, dy };
+  }
+  return { ...nearest, inside };
+}
+
+export function solidContains(solid, x, y, padding = 0) {
+  if (!solid.points) return Math.hypot((x - solid.x) / (solid.rx + padding), (y - solid.y) / (solid.ry + padding)) < 1 - 1e-7;
+  if (x < solid.aabb.left - padding || x > solid.aabb.right + padding
+    || y < solid.aabb.top - padding || y > solid.aabb.bottom + padding) return false;
+  const edge = closestEdge(solid.points, x, y);
+  return edge.inside || edge.distance < padding - 1e-6;
+}
+
+function slide(entity, nx, ny) {
+  const inward = (entity.vx ?? 0) * nx + (entity.vy ?? 0) * ny;
+  if (inward < 0) {
+    entity.vx = (entity.vx ?? 0) - inward * nx;
+    entity.vy = (entity.vy ?? 0) - inward * ny;
+  }
+}
+
+function collidePolygon(entity, padding, solid) {
+  if (!solidContains(solid, entity.x, entity.y, padding)) return;
+  const edge = closestEdge(solid.points, entity.x, entity.y);
+  let nx = entity.x - edge.x;
+  let ny = entity.y - edge.y;
+  if (edge.inside) { nx *= -1; ny *= -1; }
+  const length = Math.hypot(nx, ny);
+  if (length < 1e-7) {
+    nx = edge.dy;
+    ny = -edge.dx;
+    const normalLength = Math.hypot(nx, ny);
+    nx /= normalLength;
+    ny /= normalLength;
+    const probe = closestEdge(solid.points, edge.x + nx * 0.1, edge.y + ny * 0.1);
+    if (probe.inside) { nx *= -1; ny *= -1; }
+  } else {
+    nx /= length;
+    ny /= length;
+  }
+  entity.x = edge.x + nx * (padding + 0.05);
+  entity.y = edge.y + ny * (padding + 0.05);
+  slide(entity, nx, ny);
+}
+
+function collideEllipse(entity, padding, solid) {
+  const rx = solid.rx + padding;
+  const ry = solid.ry + padding;
+  const dx = entity.x - solid.x;
+  const dy = entity.y - solid.y;
+  const normalized = Math.hypot(dx / rx, dy / ry);
+  if (normalized >= 1) return;
+  let nx;
+  let ny;
+  if (normalized > 0.00001) {
+    entity.x = solid.x + dx / normalized;
+    entity.y = solid.y + dy / normalized;
+    nx = dx / (rx * rx);
+    ny = dy / (ry * ry);
+  } else {
+    nx = rx < ry ? 1 : 0;
+    ny = rx < ry ? 0 : -1;
+    entity.x = solid.x + nx * rx;
+    entity.y = solid.y + ny * ry;
+  }
+  const length = Math.hypot(nx, ny);
+  slide(entity, nx / length, ny / length);
+}
+
 export function resolveTerrain(entity, radius, reef) {
   const padding = Math.max(0, radius);
   entity.x = clamp(entity.x, padding + 2, reef.width - padding - 2);
-  for (let pass = 0; pass < 3; pass++) {
+  for (let pass = 0; pass < 5; pass++) {
     const high = roofAt(entity.x, reef) + padding;
     const low = floorAt(entity.x, reef) - padding;
     const y = clamp(entity.y, high, low);
@@ -39,38 +120,33 @@ export function resolveTerrain(entity, radius, reef) {
       entity.y = y;
     }
     for (const solid of reef.solids ?? []) {
-      const rx = solid.rx + padding;
-      const ry = solid.ry + padding;
-      const dx = entity.x - solid.x;
-      const dy = entity.y - solid.y;
-      const normalized = Math.hypot(dx / rx, dy / ry);
-      if (normalized >= 1) continue;
-      let nx;
-      let ny;
-      if (normalized > 0.00001) {
-        entity.x = solid.x + dx / normalized;
-        entity.y = solid.y + dy / normalized;
-        nx = dx / (rx * rx);
-        ny = dy / (ry * ry);
-      } else {
-        // At its center the shorter axis is the nearest exit.
-        nx = rx < ry ? 1 : 0;
-        ny = rx < ry ? 0 : -1;
-        entity.x = solid.x + nx * rx;
-        entity.y = solid.y + ny * ry;
-      }
-      const length = Math.hypot(nx, ny);
-      nx /= length;
-      ny /= length;
-      const inward = (entity.vx ?? 0) * nx + (entity.vy ?? 0) * ny;
-      if (inward < 0) {
-        entity.vx = (entity.vx ?? 0) - inward * nx;
-        entity.vy = (entity.vy ?? 0) - inward * ny;
-      }
+      if (solid.points) collidePolygon(entity, padding, solid);
+      else collideEllipse(entity, padding, solid);
     }
   }
   entity.x = clamp(entity.x, padding + 2, reef.width - padding - 2);
   entity.y = clamp(entity.y, roofAt(entity.x, reef) + padding, floorAt(entity.x, reef) - padding);
+  if ((reef.solids ?? []).some(solid => solidContains(solid,entity.x,entity.y,padding))) {
+    const originX=entity.x;
+    const originY=entity.y;
+    let found=false;
+    for(const distance of [8,18,36,64,100,150,220,330,480,700]) {
+      for(let i=0;i<32;i++) {
+        const angle=i/32*Math.PI*2;
+        const x=clamp(originX+Math.cos(angle)*distance,padding+2,reef.width-padding-2);
+        const y=originY+Math.sin(angle)*distance;
+        if(y<roofAt(x,reef)+padding||y>floorAt(x,reef)-padding) continue;
+        if((reef.solids ?? []).some(solid => solidContains(solid,x,y,padding))) continue;
+        entity.x=x;
+        entity.y=y;
+        entity.vx=0;
+        entity.vy=0;
+        found=true;
+        break;
+      }
+      if(found) break;
+    }
+  }
   return entity;
 }
 
@@ -110,12 +186,131 @@ function population(reef, map) {
   return shoals;
 }
 
+function polygon(style, structure, points) {
+  const vertices = points.map(([x, y]) => ({ x, y }));
+  const xs = vertices.map(p => p.x);
+  const ys = vertices.map(p => p.y);
+  const aabb = { left: Math.min(...xs), right: Math.max(...xs), top: Math.min(...ys), bottom: Math.max(...ys) };
+  return {
+    points: vertices, style, structure, aabb,
+    x: (aabb.left + aabb.right) / 2, y: (aabb.top + aabb.bottom) / 2,
+    rx: (aabb.right - aabb.left) / 2, ry: (aabb.bottom - aabb.top) / 2,
+  };
+}
+
+function shelf(style, x, y, width, thickness, slope = 0) {
+  return polygon(style, 'shelf', [[x-width/2,y-8],[x-width*0.22,y-18+slope*0.25],
+    [x+width*0.3,y-5+slope*0.7],[x+width/2,y+slope],[x+width*0.42,y+thickness+slope],
+    [x-width*0.36,y+thickness+8],[x-width/2,y+thickness*0.4]]);
+}
+
+function pillar(style, x, y, width, height, lean = 0) {
+  return polygon(style, 'pillar', [[x-width/2,y-height/2],[x+width*0.3,y-height/2-14],
+    [x+width/2+lean,y+height/2-16],[x+lean,y+height/2+8],[x-width*0.42+lean,y+height/2]]);
+}
+
+function vault(x, y) {
+  return polygon('bone', 'arch', [[x-178,y+156],[x-178,y-18],[x-124,y-139],[x,y-196],
+    [x+124,y-139],[x+178,y-18],[x+178,y+156],[x+129,y+156],[x+126,y-9],
+    [x+91,y-104],[x,y-145],[x-91,y-104],[x-126,y-9],[x-129,y+156]]);
+}
+
+function formations(index) {
+  if (index === 0) return [
+    shelf('coral',670,460,340,46,-15), shelf('coral',1760,820,300,58,10),
+    pillar('coral',3100,305,55,140,-15), shelf('coral',3950,1010,370,50,-12),
+    shelf('coral',4650,310,310,55,15), pillar('coral',5610,680,75,225,25),
+    shelf('coral',1920,605,245,40,-25), shelf('coral',5430,925,240,45,-10),
+  ];
+  if (index === 1) return [
+    shelf('wreck',650,380,370,44,24), pillar('wreck',1660,620,47,250,35),
+    shelf('wreck',2770,1100,390,45,-70), pillar('wreck',3490,416,50,310,-75),
+    shelf('wreck',4440,1158,380,45,-20), pillar('wreck',5340,853,57,360,76),
+    shelf('wreck',6500,515,310,42,20), shelf('wreck',3710,1130,360,50,-25),
+    shelf('wreck',1850,970,275,38,15),
+  ];
+  if (index === 2) return [
+    pillar('crystal',810,518,71,270,30), shelf('crystal',1540,1230,370,60,15),
+    pillar('crystal',2370,1440,80,390,-44), shelf('crystal',3110,1440,400,50,-55),
+    pillar('crystal',3990,1200,75,390,46), shelf('crystal',4730,1660,360,50,-30),
+    shelf('crystal',5160,770,300,55,30), pillar('crystal',1810,620,55,230,-25),
+  ];
+  if (index === 3) return [
+    shelf('vent',690,720,360,64,15), shelf('vent',1640,1170,320,75,-20),
+    shelf('vent',2590,470,360,65,25), pillar('vent',3420,1025,95,360,-28),
+    shelf('vent',4320,1230,360,65,-20), shelf('vent',5120,1110,390,70,-45),
+    pillar('vent',6000,775,95,360,30), shelf('vent',6710,1230,290,65,-15),
+    shelf('vent',1750,600,275,70,20),
+  ];
+  return [
+    vault(1630,660), shelf('bone',2540,1220,360,47,-20), vault(3290,780),
+    shelf('bone',4100,1180,380,47,15), vault(4940,620),
+    shelf('bone',5700,900,380,46,-25), pillar('bone',730,780,66,350,0),
+    shelf('bone',2630,400,330,42,15),
+  ];
+}
+
+function features(index) {
+  const source = [
+    [
+      ['kelpFlow',610,320,230,125,1,0], ['surge',1810,750,240,100,1,-0.25],
+      ['kelpFlow',2910,345,210,110,-1,0.1], ['surge',3910,900,260,100,1,-0.4],
+      ['kelpFlow',4880,900,230,120,1,-0.2], ['surge',6270,830,220,100,-1,-0.1],
+    ],
+    [
+      ['fallingDebris',1460,420,32,40,0,1], ['sluice',2860,1110,16,180,0,0],
+      ['fallingDebris',3660,750,34,44,0,1], ['sluice',4610,1050,16,170,0,0],
+      ['fallingDebris',5970,690,32,44,0,1], ['fallingDebris',7240,400,32,42,0,1],
+    ],
+    [
+      ['whirlpool',1020,830,130,130,1,0], ['updraft',1850,1390,90,215,0,-1],
+      ['whirlpool',3050,1130,140,140,-1,0], ['updraft',4070,1410,95,210,0,-1],
+      ['whirlpool',5230,1110,125,125,1,0], ['whirlpool',6220,1430,115,115,-1,0],
+    ],
+    [
+      ['eruption',1470,1440,44,240,0,-1], ['steamJet',2620,1110,120,32,1,-0.2],
+      ['eruption',4020,1530,46,270,0,-1], ['steamJet',5200,770,120,32,-1,0.1],
+      ['eruption',6360,1420,44,240,0,-1], ['eruption',7530,1410,44,230,0,-1],
+    ],
+    [
+      ['lightGate',1450,690,16,255,0,0], ['pulseLane',2480,1000,200,200,0,0],
+      ['lightGate',3860,760,16,255,0,0], ['pulseLane',4920,960,210,210,0,0],
+      ['lightGate',5660,650,16,255,0,0], ['pulseLane',6760,850,180,180,0,0],
+    ],
+  ][index];
+  return source.map(([kind,x,y,rx,ry,dx,dy], i) => ({
+    kind,x,y,rx,ry,dx,dy,delay:i*0.23,
+  }));
+}
+
+function pickupPoints(reef, index) {
+  const kinds = [
+    ['heal','bait','haste','magnet'], ['magnet','shield','sonar','heal'],
+    ['sonar','haste','magnet','bait'], ['shield','heal','haste','sonar'],
+    ['sonar','shield','bait','magnet'],
+  ][index];
+  return Array.from({length:16}, (_, i) => {
+    const x = 500 + i * (reef.width - 1020) / 15;
+    const high = roofAt(x, reef);
+    const low = floorAt(x, reef);
+    const y = i === 0 ? reef.spawn[1] : high + (low - high) * (i % 2 ? 0.77 : 0.22);
+    const [sx,sy] = safePoint(reef,x,y,52);
+    return {kind:kinds[i % kinds.length],x:sx,y:sy};
+  });
+}
+
 function route(profile, index) {
   const reef = {
     ...profile,
     bounds: Math.max(...profile.floor.map(([, y]) => y)) + 70,
     regions: profile.regions.map(([from, to, name, detail]) => ({ from, to, name, detail })),
   };
+  reef.solids = [...profile.solids, ...formations(index)];
+  reef.features = features(index).map(feature => {
+    const [x,y] = safePoint(reef,feature.x,feature.y,36);
+    return {...feature,x,y};
+  });
+  reef.pickups = pickupPoints(reef,index);
   reef.shoals = population(reef, index);
   reef.currents = profile.currents.map(([x, y, dx, dy]) => {
     const [sx, sy] = safePoint(reef, x, y, 36);

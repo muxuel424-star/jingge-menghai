@@ -108,3 +108,16 @@ button:focus-visible { outline: 2px solid #a5f8ff; outline-offset: 3px; }
   #seaChart { bottom: 90px; }
   #seaChart.expanded { bottom: 25%; }
 }
+
+#equipmentStatus {
+  position: absolute; bottom: 101px; left: 20px; max-width: min(490px, 55vw);
+  padding: 8px 12px; border-radius: 10px; color: #baf3ff; background: #0c2038d9;
+  border: 1px solid #8be2eb45; font-size: 12px; line-height: 1.7;
+}
+#equipmentStatus:empty { display: none; }
+@media (max-width: 690px) {
+  #equipmentStatus { left: 8px; bottom: 167px; max-width: 56vw; font-size: 10px; padding: 5px 7px; }
+}
+@media (pointer: coarse) and (min-width: 691px) {
+  #equipmentStatus { bottom: 158px; }
+}

@@ -90,7 +90,7 @@ function prepareAttack(game, boss) {
       y: clamp(target.y + (index % 2 ? -72 : 15), roofAt(target.x, game.reef) + 50, floorAt(target.x, game.reef) - 50),
     }));
   }
-  game.audio.warn();
+  game.audio.bossTell?.(boss.def.key, pattern.skill);
 }
 
 function firePlates(game, boss, attack) {
@@ -136,6 +136,10 @@ function runRush(game, boss, attack, dt) {
     attack.originY = boss.y;
   }
   if (beatTime < 0.25) return;
+  if (attack.soundedStep !== step) {
+    attack.soundedStep = step;
+    game.audio.bossAttack?.(boss.def.key, 'dash');
+  }
   const previous = { x: boss.x, y: boss.y };
   const speed = attack.speed + (boss.phase - 1) * 40;
   boss.x += attack.dx * speed * dt;
@@ -155,6 +159,7 @@ function runAttack(game, boss, dt) {
   const interval = attack.skill === 'wave' ? 0.72 : attack.skill === 'stones' ? 0.66 : 0.43;
   const count = attack.skill === 'wave' ? attack.rings : attack.skill === 'ambush' ? 1 : attack.volleys;
   if (attack.fired < count && elapsed >= attack.fired * interval) {
+    game.audio.bossAttack?.(boss.def.key, attack.skill);
     if (attack.skill === 'plates') firePlates(game, boss, attack);
     if (attack.skill === 'stones') fireStones(game, boss, attack);
     if (attack.skill === 'wave') {
@@ -200,6 +205,7 @@ function updateHazards(game, dt) {
 }
 
 function defeatBoss(game, boss) {
+  game.audio.bossDown?.(boss.def.key);
   boss.attack = null;
   boss.recovery = 0;
   boss.engaged = false;
@@ -240,7 +246,7 @@ function biteBoss(game, boss) {
   boss.x += Math.sign(boss.x - player.x || player.dir) * 11;
   game.biteFlash = 0.23;
   game.shake = Math.max(game.shake, 5.2);
-  game.audio.crunch();
+  game.audio.bossHurt?.(boss.def.key);
   game.effect(boss, { type: 'pop', radius: 43, color: '#ffe099' });
   game.effect(boss, { type: 'food', text: (behind ? '背袭 ' : '') + '−' + damage, color: '#ffe5a2' });
   if (!boss.hp) defeatBoss(game, boss);
@@ -270,6 +276,7 @@ export function updateBoss(game, dt) {
   const phase = boss.hp <= boss.maxHp * 0.25 && boss.def.boss ? 3 : boss.hp < boss.maxHp * 0.5 ? 2 : 1;
   if (phase > boss.phase) {
     boss.phase = phase;
+    game.audio.bossPhase?.(boss.def.key, phase);
     boss.attack = null;
     boss.stun = 0;
     boss.recovery = 0;

@@ -23,7 +23,12 @@ export function drawSeaMap(canvas, game) {
   c.stroke();
   for (const solid of reef.solids ?? []) {
     c.beginPath();
-    c.ellipse(x(solid.x), y(solid.y), solid.rx * sx, solid.ry * sy, 0, 0, Math.PI * 2);
+    if (solid.points) {
+      solid.points.forEach((point, i) => i ? c.lineTo(x(point.x), y(point.y)) : c.moveTo(x(point.x), y(point.y)));
+      c.closePath();
+    } else {
+      c.ellipse(x(solid.x), y(solid.y), solid.rx * sx, solid.ry * sy, 0, 0, Math.PI * 2);
+    }
     c.fillStyle = '#0b1628';
     c.fill();
   }
@@ -44,6 +49,17 @@ export function drawSeaMap(canvas, game) {
     c.beginPath();
     c.arc(x(shoal.x), y(shoal.y), 2.0, 0, Math.PI * 2);
     c.fill();
+  }
+  c.fillStyle = '#ffd78a';
+  for (const pickup of game.zone.pickups ?? []) {
+    if (pickup.timer || (!game.equipment.sonar && Math.hypot(pickup.x-game.player.x,pickup.y-game.player.y)>700)) continue;
+    c.fillRect(x(pickup.x)-2.5,y(pickup.y)-2.5,5,5);
+  }
+  if (game.equipment.sonar) {
+    c.fillStyle = '#e4c2ff';
+    for (const item of game.zone.things) {
+      if (item.kind === 'chest' && !item.timer) c.fillRect(x(item.x)-3,y(item.y)-3,6,6);
+    }
   }
   const boss = game.zone.boss;
   if (boss.hp > 0) {
