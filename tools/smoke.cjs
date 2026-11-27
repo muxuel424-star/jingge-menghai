@@ -47,6 +47,19 @@ async function runSmoke(args = []) {
     const beforeMove = await state();
     await page.keyboard.down('d'); await page.waitForTimeout(320); await page.keyboard.up('d');
     record('real keyboard moves player', (await state()).x > beforeMove.x + 15, { before: beforeMove.x, after: (await state()).x });
+    await page.evaluate(()=>{__jg2d.game.player.dash=2;});
+    await page.keyboard.down('d');await page.keyboard.down('Shift');
+    await page.waitForFunction(()=>__jg2d.game.player.dashExhausted&&!__jg2d.game.player.dashing);
+    const exhausted=await page.evaluate(()=>new Promise(resolve=>{
+      const modes=new Set();let frames=0,restarts=0,invuln=0;
+      const sample=()=>{const a=__jg2d;frames++;restarts+=Number(a.game.player.dashing);invuln=Math.max(invuln,a.game.player.invuln);modes.add(a.renderer.animator.state);
+        if(frames<45)requestAnimationFrame(sample);else resolve({frames,restarts,invuln,modes:[...modes],stamina:a.game.player.dash});};requestAnimationFrame(sample);
+    }));
+    record('held exhausted sprint stays swimming instead of flashing between poses',exhausted.restarts===0&&exhausted.modes.every(mode=>mode==='swim')&&exhausted.invuln===0,exhausted);
+    await page.keyboard.up('Shift');await page.waitForFunction(()=>!__jg2d.game.player.dashExhausted);
+    await page.keyboard.down('Shift');await page.waitForFunction(()=>__jg2d.game.player.dashing);
+    record('a fresh sprint press works after exhaustion and release',await page.evaluate(()=>__jg2d.game.player.dashing));
+    await page.keyboard.up('Shift');await page.keyboard.up('d');
     await page.keyboard.down('f'); await page.waitForTimeout(160);
     record('real F key starts singing', (await state()).holding);
     await page.keyboard.press('Escape'); await waitScreen('PAUSE'); await page.keyboard.up('f');

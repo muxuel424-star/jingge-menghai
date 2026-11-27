@@ -4,10 +4,12 @@ import { approach, clamp, normalize } from '../math.js';
 export function movePlayer(game, dt, input) {
   const p = game.player, haste = p.buffs.find(b => b.key === 'haste');
   const wasDashing = p.dashing;
+  if (!input.dash) p.dashExhausted = false;
+  else if (p.dash <= 0) p.dashExhausted = true;
   const direction = normalize(input.x || 0, input.y || 0);
   if (direction.x) p.dir = Math.sign(direction.x);
   if (direction.x || direction.y) p.angle = Math.atan2(direction.y, direction.x);
-  p.dashing = Boolean(input.dash && p.dash > 0 && (direction.x || direction.y));
+  p.dashing = Boolean(input.dash && !p.dashExhausted && p.dash > 0 && (direction.x || direction.y));
   if (game.state === 'SURFACE' && p.singing) p.dashing = false;
   if (p.dashing && p.singing) { game.breakSong(); p.singing = false; }
   if (p.dashing && !wasDashing) { p.dashPassTimer = SPECIES.manta.dashPassInvulnerable; game.emit('dash', { x: p.x, y: p.y }); }
@@ -25,6 +27,8 @@ export function movePlayer(game, dt, input) {
   game.terrain.resolve(p, p.r, p.tier);
   const regen = T.player.dashRegen * (haste?.dashRegenMul ?? 1);
   p.dash = clamp(p.dash + (p.dashing ? -T.player.dashDrain : regen) * dt, 0, T.player.dashMax);
+  // A held exhausted button must not alternate dash/swim every time regen adds a fraction.
+  if (p.dashing && p.dash <= 0) p.dashExhausted = true;
 }
 export function tickResources(game, dt) {
   const p = game.player;
