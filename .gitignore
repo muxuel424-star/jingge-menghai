@@ -12,5 +12,15 @@
 !/src/audio.js
 !/src/meta.js
 !/src/ocean-data.js
+!/src/main.js
+!/src/data/
+!/src/sim/
+!/src/render/
+!/src/audio/
+!/src/ui/
 /tools/*
 !/tools/serve.cjs
+!/tools/browser.cjs
+!/tools/smoke.cjs
+!/tools/perf.cjs
+!/tools/audio-check.cjs

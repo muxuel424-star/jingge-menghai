@@ -6,10 +6,18 @@
   "scripts": {
     "build": "node build.mjs",
     "dev": "node --watch-path=src --watch-path=assets/side --watch-path=index.html --watch-path=build.mjs build.mjs --serve 8124",
-    "build:pages": "node build.mjs --pages"
+    "build:pages": "node build.mjs --pages",
+    "test": "node --test",
+    "test:replay": "node --test --test-name-pattern=replay test/sim.test.js",
+    "test:smoke": "node tools/smoke.cjs",
+    "test:shots": "node tools/smoke.cjs --shots",
+    "test:perf": "node tools/perf.cjs",
+    "test:audio": "node tools/audio-check.cjs"
   },
   "dependencies": {
-    "esbuild": "0.25.10",
-    "three": "0.180.0"
+    "esbuild": "0.25.10"
+  },
+  "devDependencies": {
+    "playwright": "^1.63.0"
   }
 }
