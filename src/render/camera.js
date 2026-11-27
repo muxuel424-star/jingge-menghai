@@ -1,14 +1,17 @@
 import { VIEW, CAMERA } from '../data/render.js';
 export class Camera {
- constructor(){this.x=0;this.y=0;this.scale=1;this.shake=0;this.kick=0;this.sx=0;this.sy=0;this.clock=0;this.ready=false;}
+ constructor(){this.x=0;this.y=0;this.scale=1;this.shake=0;this.kick=0;this.sx=0;this.sy=0;this.clock=0;this.ready=false;this.lookX=0;}
  reset(p){this.x=p.x;this.y=p.y;this.ready=false;this.shake=0;}
- impulse(amount){this.shake=Math.min(CAMERA.maxShake,this.shake+amount);}
+ impulse(amount){this.shake=Math.max(this.shake,Math.min(CAMERA.maxShake,amount));}
  step(game,dt,settings){
   const p=game.player,scene=game.scene;if(!p||!scene)return;
-  this.clock+=dt;this.scale=1/(1+p.tier*CAMERA.tierZoom);
-  if(game.evolutionTimer>0)this.scale*=1+Math.sin((1-game.evolutionTimer/1.2)*Math.PI)*.08;
-  const lead=(p.dir>0?CAMERA.leadForward:CAMERA.leadBack)*VIEW.w;
-  const tx=p.x+(lead-VIEW.w/2)*p.dir;
+  this.clock+=dt;
+  let zoom=1/(1+p.tier*CAMERA.tierZoom);
+  if(game.evolutionTimer>0)zoom*=1+Math.sin((1-game.evolutionTimer/1.2)*Math.PI)*.08;
+  const moving=Math.min(1,Math.abs(p.vx)/195),lead=(.5-(p.dir>0?CAMERA.leadForward:CAMERA.leadBack))*VIEW.w*moving;
+  this.lookX+=(lead-this.lookX)*(1-Math.exp(-dt*4));
+  this.scale+=(zoom-this.scale)*(1-Math.exp(-dt*6));
+  const tx=p.x+this.lookX;
   const ty=p.y;
   if(!this.ready){this.x=tx;this.y=ty;this.ready=true;}
   const ease=1-Math.exp(-dt*CAMERA.ease);

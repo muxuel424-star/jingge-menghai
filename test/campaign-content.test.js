@@ -43,7 +43,15 @@ function deepRouteInput(game, bot, frame) {
   if (game.blockHeld || game.evolutionTimer > 0 || (scene.loop && !game.conditions.still3s && game.loopCount)) return {};
   if (frame % 15 === 0) {
     bot.target = null;
-    if (player.tier < 2 || player.stability < 45) {
+    // A player steers toward visible notes rather than hoping the route or a
+    // chase happens to brush their pickup radius. Keep ordinary input physics.
+    if (player.stability >= 35) {
+      bot.target = game.entities.melodies.filter(note => !note.collected && player.tier >= note.requiresTier
+        && Math.abs(note.x - player.x) < 600 && Math.abs(note.y - player.y) < 320)
+        .sort((a,b) => Math.hypot(a.x-player.x,a.y-player.y)-Math.hypot(b.x-player.x,b.y-player.y))
+        .find(note => clearLine(game,note));
+    }
+    if (!bot.target && (player.tier < 2 || player.stability < 45)) {
       const gate = scene.gates.find(candidate => candidate.tier > player.tier);
       const candidates = [
         ...game.fish.filter(fish => canEat(player, fish)),

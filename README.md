@@ -4,6 +4,8 @@
 
 大肥鱼在鲸宫值夜班，替睡不着的人送梦。五张派工单对应五个独立梦境，每一夜按「浅梦送梦 → 潜梦 → 深梦捕食成长 → 安抚前辈 → 日报领薪」推进。重玩可以从潜梦开始。
 
+最近的[地形与动作改进](docs/VISUAL-POLISH.md)补齐了自然礁岸、五海材质与环境细节，并加入连续动作插值、平滑转身，修复自动吞小鱼顿帧和挥空抖屏。
+
 ## 操作
 
 | 操作 | 按键 |
@@ -38,9 +40,12 @@ npm run test:smoke
 npm run test:shots
 npm run test:audio
 npm run test:perf
+npm run test:motion
 ```
 
 浏览器检查使用本机 Chrome，或先运行 `npx playwright install chromium`。工具自动启动只监听 127.0.0.1 的临时服务器与独立浏览器存档。截图、音频与性能报告默认进入系统临时目录，也可加 `--out=绝对路径`。
+
+动作录像工具另需本机已安装 ffmpeg。
 
 ## 参与修改
 

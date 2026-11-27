@@ -8,7 +8,7 @@ export class Effects {
   this.pool=Array.from({length:FX.limit},()=>({ttl:0}));this.next=0;this.notice='';this.noticeT=0;this.story='';this.storyT=0;this.flash=0;this.hurtAngle=0;this.hurtT=0;
   const add=(type,p)=>this.add(type,p);
   for(const name of ['eat','dream.collect','dream.deliver','song.release','hurt','bite','evolve','boss.hurt','boss.down','shield.break','melody.collect'])bus.on(name,p=>add(name,p));
-  for(const name of Object.keys(FX.shake))bus.on(name,()=>camera.impulse(FX.shake[name]));
+  for(const name of Object.keys(FX.shake))bus.on(name,p=>{if(name==='bite'&&!p.hit)return;camera.impulse(FX.shake[name]);});
   bus.on('notify',p=>{this.notice=p.text||'';this.noticeT=p.ttl||3;});
   bus.on('fragment.collect',p=>{this.story=text(p.textKey);this.storyT=7;});
   bus.on('song.release',p=>{this.notice={perfect:'完美',good:'应答',miss:'错拍'}[String(p.quality).toLowerCase()]||'';this.noticeT=1.2;});

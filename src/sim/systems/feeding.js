@@ -48,7 +48,9 @@ export function tickFeeding(game) {
     }
     if (canEat(p, f) && (f.kind === 'fry' || p.biteWindow > 0)) {
       if (p.hitIds.has(f.id)) continue;
-      p.hitIds.add(f.id); eat(game, f); game.hitstop = T.player.hitstop;
+      p.hitIds.add(f.id); eat(game, f);
+      // Passive fry feeding must not repeatedly freeze swimming through a school.
+      if (f.kind !== 'fry' && p.biteWindow > 0) game.hitstop = T.player.hitstop;
       if (p.biteWindow > 0) game.emit('bite', { hit: true, target: f.kind, x: f.x, y: f.y });
     }
   }

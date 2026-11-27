@@ -1,7 +1,7 @@
 {
   "date": "2026-11-27",
   "unitTests": {
-    "passed": 90,
+    "passed": 103,
     "failed": 0
   },
   "browserSmoke": {
@@ -21,14 +21,15 @@
       1920,
       1080
     ],
-    "fps": 59.78,
-    "simP95Ms": 1.9,
-    "drawP95Ms": 1.5,
-    "drawImagesMax": 9,
-    "firstReadyMs": 695,
-    "jsHeapPeakMB": 7.14,
+    "fps": 59.87,
+    "simP95Ms": 1.7,
+    "drawP95Ms": 2.1,
+    "drawImagesMax": 13,
+    "firstReadyMs": 744,
+    "jsHeapPeakMB": 8.05,
     "physicalIGPU": "not independently verified",
-    "totalMemoryMB": "not established by JS heap"
+    "totalMemoryMB": "not established by JS heap",
+    "heroFrameAndBlendCacheMiB": 69.34
   },
   "audio": {
     "mode": "14-second OfflineAudioContext synthesis",
@@ -50,6 +51,8 @@
   "notes": [
     "Input-driven simulation regressions clear all five bosses through three song gates and reach every deep-layer size key.",
     "Browser scene fixtures validate rendering and integration; they do not count as natural clears.",
-    "No claim of invisible GC pauses or total GPU/canvas memory acceptance."
-  ]
+    "No claim of invisible GC pauses or total GPU/canvas memory acceptance.",
+    "Motion review replays identical real keyboard sequences before and after; recordings are diagnostic and separate from the performance sample."
+  ],
+  "version": "2.1.0"
 }

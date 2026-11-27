@@ -1,7 +1,7 @@
 {
   "name": "jingge-menghai",
   "private": true,
-  "version": "2.0.0",
+  "version": "2.1.0",
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
@@ -12,7 +12,8 @@
     "test:smoke": "node tools/smoke.cjs",
     "test:shots": "node tools/smoke.cjs --shots",
     "test:perf": "node tools/perf.cjs",
-    "test:audio": "node tools/audio-check.cjs"
+    "test:audio": "node tools/audio-check.cjs",
+    "test:motion": "node tools/motion-check.cjs"
   },
   "dependencies": {
     "esbuild": "0.25.10"

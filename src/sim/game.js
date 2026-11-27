@@ -197,12 +197,12 @@ export class Game {
   }
   tick(dt) {
     if ([STATES.TITLE, STATES.BRIEF, STATES.DAWN].includes(this.state)) return;
+    const p = this.player; p.prevX = p.x; p.prevY = p.y;
     this.stateTime += dt;
     if (this.state === STATES.DESCENT) { this.descentTime += dt; if (this.descentTime >= T.run.descent) this.transition(STATES.DEEP); return; }
     if (this.counterkill) { this.counterkill.remaining -= dt; if (this.counterkill.remaining <= 0) { eat(this, this.counterkill.fish); this.pearls += T.economy.abyss; this.counterkill = null; } return; }
     if (this.evolutionTimer > 0) { this.evolutionTimer = Math.max(0, this.evolutionTimer - dt); return; }
     if (this.hitstop > 0) { this.hitstop = Math.max(0, this.hitstop - dt); return; }
-    const p = this.player; p.prevX = p.x; p.prevY = p.y;
     this.targetGrace = Math.max(0, (this.targetGrace ?? 0) - dt);
     if (this.boss?.down) { tickBoss(this, dt); return; }
     if (this.state === STATES.BOSS && this.boss.state === 'intro' && this.boss.timer < T.boss.intro) { tickBoss(this, dt); return; }

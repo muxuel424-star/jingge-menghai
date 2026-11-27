@@ -20,3 +20,4 @@
 !/tools/smoke.cjs
 !/tools/perf.cjs
 !/tools/audio-check.cjs
+!/tools/motion-check.cjs

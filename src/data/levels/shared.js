@@ -4,7 +4,18 @@
 // 08 places melody at D1 end / D2 gate / D3 front, overriding 05's conflicting numbering.
 import { TUNING } from '../tuning.js';
 const point = ([x, y]) => ({ x, y });
-export const ellipse = (x, y, rx, ry, kind = 'solid') => ({ x, y, rx, ry, kind, shape: 'ellipse' });
+// Three authored coastlines: shelves, eroded notches and broken lower faces.
+// Every vertex lies inside the unit disk, so converting an old ellipse only
+// removes rock; it can never expand into an authored swimming route.
+const COASTLINES = [
+  [[-.25,-.87],[.1,-.94],[.39,-.78],[.57,-.66],[.49,-.48],[.78,-.38],[.94,-.06],[.78,.12],[.86,.38],[.57,.65],[.36,.69],[.1,.91],[-.25,.84],[-.55,.71],[-.67,.42],[-.88,.33],[-.96,-.04],[-.82,-.26],[-.72,-.28],[-.65,-.55],[-.38,-.74]],
+  [[-.06,-.93],[.23,-.83],[.44,-.81],[.7,-.56],[.65,-.3],[.92,-.12],[.84,.13],[.9,.34],[.67,.5],[.47,.73],[.25,.69],[.04,.91],[-.2,.91],[-.39,.71],[-.63,.65],[-.77,.41],[-.73,.17],[-.94,-.08],[-.77,-.37],[-.51,-.66],[-.27,-.7]],
+  [[-.15,-.92],[.18,-.94],[.39,-.75],[.6,-.62],[.82,-.43],[.76,-.21],[.94,.03],[.81,.27],[.75,.49],[.52,.61],[.28,.85],[-.02,.94],[-.27,.79],[-.53,.77],[-.62,.49],[-.85,.34],[-.91,.02],[-.78,-.16],[-.83,-.29],[-.65,-.44],[-.42,-.68]],
+];
+export const ellipse = (x, y, rx, ry, kind = 'solid') => {
+  const profile = Math.abs(Math.round(x / 37) + Math.round(y / 29) * 3 + Math.round(rx / 19) * 7 + Math.round(ry / 17) * 11) % COASTLINES.length;
+  return { x, y, rx, ry, kind, shape: 'polygon', coastline: profile, points: COASTLINES[profile].map(([u,v]) => ({ x: x + u * rx, y: y + v * ry })) };
+};
 export const polygon = (points, kind = 'solid') => ({ points: points.map(point), kind, shape: 'polygon' });
 export const hazard = (kind, x, y, w, h, period = 5) => ({ kind, x, y, w, h, period });
 
