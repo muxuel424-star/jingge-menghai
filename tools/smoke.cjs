@@ -27,6 +27,10 @@ async function runSmoke(args = []) {
   try {
     await harness.load();
     record('title loads', (await state()).screen === 'TITLE');
+    const idleBefore=await page.evaluate(()=>({clock:__jg2d.renderer.clock,time:__jg2d.game.time}));
+    await page.waitForTimeout(150);
+    const idleAfter=await page.evaluate(()=>({clock:__jg2d.renderer.clock,time:__jg2d.game.time}));
+    record('palace idle animation runs while menu simulation remains frozen',idleAfter.clock>idleBefore.clock&&idleAfter.time===idleBefore.time,{idleBefore,idleAfter});
     const migration = await page.evaluate(() => ({ pearls: __jg2d.meta.pearls, upg: __jg2d.meta.upg,
       runs: __jg2d.meta.data.stats.runs, old: localStorage.getItem('jg_hunt_save_v1') }));
     record('legacy save migrates pearls and upgrades once', migration.pearls === 137 && migration.upg.echo === 3 && migration.runs === 12 && migration.old === null, migration);

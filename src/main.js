@@ -83,7 +83,8 @@ function frame(now){
     dash:keys.has('shift')||held.dash,bite:keys.has('j')||held.bite,sing:keys.has('f')||keys.has(' ')||held.sing});
    metrics.simMs=performance.now()-start;metrics.maxSimMs=Math.max(metrics.maxSimMs,metrics.simMs);
   }
-  renderer.step(game,paused?0:dt);renderer.draw(game,Math.max(0,Math.min(1,game.accumulator/T.sim.step)),mode,meta);audio.update(game);
+  const animateMenu=['TITLE','ORDERS','SHOP','JOURNAL','DAWN'].includes(mode)||mode==='SETTINGS'&&game.state==='TITLE';
+  renderer.step(game,paused&&!animateMenu?0:dt);renderer.draw(game,Math.max(0,Math.min(1,game.accumulator/T.sim.step)),mode,meta);audio.update(game);
  }
  metrics.frames++;metrics.frameMs=performance.now()-begin;metrics.maxFrameMs=Math.max(metrics.maxFrameMs,metrics.frameMs);
  requestAnimationFrame(frame);
