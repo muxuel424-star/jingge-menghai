@@ -1,0 +1,55 @@
+{
+  "date": "2026-11-27",
+  "unitTests": {
+    "passed": 90,
+    "failed": 0
+  },
+  "browserSmoke": {
+    "passed": 37,
+    "failed": 0,
+    "pageErrors": 0,
+    "consoleErrors": 0
+  },
+  "offlineFile": {
+    "boot": true,
+    "keyboardMovement": true,
+    "externalRequests": 0
+  },
+  "performance": {
+    "mode": "60-second headless Chrome sample; five deep scenes and five phase-three arenas",
+    "backing": [
+      1920,
+      1080
+    ],
+    "fps": 59.78,
+    "simP95Ms": 1.9,
+    "drawP95Ms": 1.5,
+    "drawImagesMax": 9,
+    "firstReadyMs": 695,
+    "jsHeapPeakMB": 7.14,
+    "physicalIGPU": "not independently verified",
+    "totalMemoryMB": "not established by JS heap"
+  },
+  "audio": {
+    "mode": "14-second OfflineAudioContext synthesis",
+    "peak": 0.1972,
+    "rms": 0.0263,
+    "clipped": 0,
+    "maxVoices": 17,
+    "maxNewVoicesPerFrame": 7,
+    "muteSurvivesResume": true,
+    "phaseSilence": true
+  },
+  "humanAcceptance": {
+    "runLength": "pending human balance test",
+    "firstWinRate": "pending",
+    "storyRecall": "pending",
+    "silhouetteBlindTest": "pending",
+    "paletteSampling": "pending"
+  },
+  "notes": [
+    "Input-driven simulation regressions clear all five bosses through three song gates and reach every deep-layer size key.",
+    "Browser scene fixtures validate rendering and integration; they do not count as natural clears.",
+    "No claim of invisible GC pauses or total GPU/canvas memory acceptance."
+  ]
+}

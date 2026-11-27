@@ -1,6 +1,21 @@
 import { P,mix } from './palette.js';
 import { VIEW,FX } from '../data/render.js';
 import { ellipse,poly } from './sprites.js';
+export function prepareBackdrops(atlas){
+ const rows=[],h=atlas.height/5;
+ for(let row=0;row<5;row++){
+  const canvas=document.createElement('canvas');canvas.width=atlas.width;canvas.height=h;
+  const ctx=canvas.getContext('2d');ctx.drawImage(atlas,0,row*h,atlas.width,h,0,0,atlas.width,h);
+  const pixels=ctx.getImageData(0,0,canvas.width,canvas.height),fade=24;
+  for(let y=0;y<canvas.height;y++){
+   const alpha=Math.min(1,y/fade,(canvas.height-1-y)/5);
+   if(alpha>=1)continue;
+   for(let x=0;x<canvas.width;x++)pixels.data[(y*canvas.width+x)*4+3]*=alpha;
+  }
+  ctx.putImageData(pixels,0,0);rows.push(canvas);
+ }
+ return rows;
+}
 function structure(c,x,y,size,theme,color,detail=false){
  c.save();c.translate(x,y);c.scale(size,size);c.fillStyle=color;c.strokeStyle=color;c.lineWidth=14;c.lineCap='round';
  if(theme==='bay'){
@@ -27,10 +42,10 @@ export function background(c,game,cam,time,atlas){
  const pal=game.level.palette,deep=game.state!=='SURFACE'&&game.state!=='BRIEF',theme=game.level.key;
  c.fillStyle=deep?mix(pal.base,P.ink,.42):pal.base;c.fillRect(0,0,VIEW.w,VIEW.h);
  if(atlas){
-  const sh=atlas.height/5,h=330,w=atlas.width/sh*h;
+  const row=atlas[game.level.level-1],h=330,w=row.width/row.height*h;
   const offset=Math.max(0,Math.min(w-VIEW.w,cam.x*.2));
   c.save();c.globalAlpha=deep?.52:.72;
-  c.drawImage(atlas,0,(game.level.level-1)*sh,atlas.width,sh,-offset,VIEW.h-h-cam.y*.035,w,h);c.restore();
+  c.drawImage(row,-offset,VIEW.h-h-cam.y*.035,w,h);c.restore();
  }
  for(let layer=0;layer<2;layer++){
   const parallax=layer?.5:.2,spacing=layer?390:540,scale=layer?1:.9;
@@ -99,4 +114,3 @@ export function workplace(c,hero,time,souvenirs=[]){
  for(let i=0;i<souvenirs.length;i++)ellipse(c,580+i*40,466,14,12,P.bone);
  if(hero){const def=hero.idle,v=def.frames[Math.floor(time*6)%def.frames.length],h=370,scale=h/def.h;c.drawImage(v,655-(def.w/2+def.margin)*scale,100+(Math.sin(time*2)*4)-def.margin*scale,(def.w+def.margin*2)*scale,(def.h+def.margin*2)*scale);}
 }
-

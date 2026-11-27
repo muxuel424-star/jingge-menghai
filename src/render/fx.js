@@ -4,6 +4,7 @@ import { text,SPECIES } from '../data/index.js';
 const TAU=Math.PI*2;
 export class Effects {
  constructor(bus,camera,animator){
+  this.camera=camera;
   this.pool=Array.from({length:FX.limit},()=>({ttl:0}));this.next=0;this.notice='';this.noticeT=0;this.story='';this.storyT=0;this.flash=0;this.hurtAngle=0;this.hurtT=0;
   const add=(type,p)=>this.add(type,p);
   for(const name of ['eat','dream.collect','dream.deliver','song.release','hurt','bite','evolve','boss.hurt','boss.down','shield.break','melody.collect'])bus.on(name,p=>add(name,p));
@@ -52,7 +53,8 @@ export class Effects {
   if(this.flash>0){c.save();c.globalAlpha=.12;c.fillStyle=P.white;c.fillRect(0,0,VIEW.w,VIEW.h);c.restore();}
   if(this.hurtT>0){c.save();c.translate(VIEW.w/2,VIEW.h/2);c.rotate(this.hurtAngle);c.strokeStyle=P.fear;c.lineWidth=5;c.beginPath();c.arc(0,0,95,-.22,.22);c.stroke();c.restore();}
   if(game.evolutionTimer>0){
-   const age=1-game.evolutionTimer/1.2,x=VIEW.w/2,y=VIEW.h/2;
+   const age=1-game.evolutionTimer/1.2,x=this.camera.screenX(game.player.x),y=this.camera.screenY(game.player.y);
+   if(age>.07&&age<.15){c.save();c.globalAlpha=.6;c.fillStyle=P.white;c.fillRect(0,0,VIEW.w,VIEW.h);c.restore();}
    c.save();c.strokeStyle=P.bone;c.lineWidth=3;c.globalAlpha=Math.sin(age*Math.PI)*.7;
    for(let i=0;i<12;i++){const a=i/12*TAU,r=50+Math.sin(age*Math.PI)*100; c.save();c.translate(x+Math.cos(a)*r,y+Math.sin(a)*r);c.rotate(a+age*3);c.strokeRect(-8,-14,16,28);c.restore();}
    c.restore();
@@ -62,4 +64,3 @@ export class Effects {
   if(this.storyT>0){c.font='18px "STKaiti","KaiTi",serif';const w=Math.min(760,c.measureText(this.story).width+48);c.fillStyle=P.paper;c.fillRect((VIEW.w-w)/2,VIEW.h-150,w,48);c.fillStyle=P.ink;c.fillText(this.story,VIEW.w/2,VIEW.h-120);}
  }
 }
-

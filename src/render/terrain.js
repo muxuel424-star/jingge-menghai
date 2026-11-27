@@ -14,7 +14,7 @@ export class TerrainRenderer {
   const canvas=document.createElement('canvas');canvas.width=VIEW.chunk;canvas.height=VIEW.chunk;
   const c=canvas.getContext('2d');c.translate(-tx*VIEW.chunk,-ty*VIEW.chunk);
   for(const s of scene.solids||[]){
-   path(c,s);c.fillStyle=deep?mix(palette.mid,P.ink,.28):palette.mid;c.fill();c.strokeStyle=P.ink;c.lineWidth=3;c.stroke();
+   path(c,s);c.fillStyle=deep?mix(palette.mid,P.ink,.28):palette.mid;c.fill();c.strokeStyle=P.ink;c.lineWidth=this.contrast?4.5:3;c.stroke();
    c.save();path(c,s);c.clip();
    const x=s.points?.[0]?.x??s.x-s.rx,y=s.points?.[0]?.y??s.y-s.ry;
    c.fillStyle=deep?palette.base:mix(palette.mid,palette.base,.55);
@@ -27,8 +27,8 @@ export class TerrainRenderer {
   if(this.chunks.size>VIEW.maxChunks){let oldest=null;for(const [k,v]of this.chunks)if(!oldest||v.used<oldest[1].used)oldest=[k,v];this.chunks.delete(oldest[0]);}
   return canvas;
  }
- draw(c,scene,cam,palette,deep){
-  if(this.scene!==scene){this.clear();this.scene=scene;}
+ draw(c,scene,cam,palette,deep,contrast=false){
+  if(this.scene!==scene||this.contrast!==contrast){this.clear();this.scene=scene;this.contrast=contrast;}
   const left=cam.x-VIEW.w/2/cam.scale,top=cam.y-VIEW.h/2/cam.scale;
   const right=cam.x+VIEW.w/2/cam.scale,bottom=cam.y+VIEW.h/2/cam.scale;
   for(let y=Math.max(0,Math.floor(top/VIEW.chunk));y<=Math.floor(bottom/VIEW.chunk);y++)
@@ -36,4 +36,3 @@ export class TerrainRenderer {
     c.drawImage(this.tile(scene,x,y,palette,deep),x*VIEW.chunk,y*VIEW.chunk);
  }
 }
-

@@ -6,6 +6,7 @@ export class Camera {
  step(game,dt,settings){
   const p=game.player,scene=game.scene;if(!p||!scene)return;
   this.clock+=dt;this.scale=1/(1+p.tier*CAMERA.tierZoom);
+  if(game.evolutionTimer>0)this.scale*=1+Math.sin((1-game.evolutionTimer/1.2)*Math.PI)*.08;
   const lead=(p.dir>0?CAMERA.leadForward:CAMERA.leadBack)*VIEW.w;
   const tx=p.x+(lead-VIEW.w/2)*p.dir;
   const ty=p.y;
@@ -26,4 +27,3 @@ export class Camera {
  screenX(x){return (x-this.x)*this.scale+VIEW.w/2;}
  screenY(y){return (y-this.y)*this.scale+VIEW.h/2;}
 }
-

@@ -8,10 +8,6 @@
 /assets/*
 !/assets/side/
 /src/*
-!/src/side/
-!/src/audio.js
-!/src/meta.js
-!/src/ocean-data.js
 !/src/main.js
 !/src/data/
 !/src/sim/

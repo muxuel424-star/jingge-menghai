@@ -5,14 +5,14 @@ import { Animator,prepareHero } from './animation.js';
 import { BossRenderer } from './boss.js';
 import { Effects } from './fx.js';
 import { HUD } from './hud.js';
-import { background,foreground,landmarks,gates,workplace } from './layers.js';
+import { background,foreground,landmarks,gates,workplace,prepareBackdrops } from './layers.js';
 import { hazards,objectives } from './world.js';
 import { fish,ellipse,poly } from './sprites.js';
 import { P } from './palette.js';
 import { text } from '../data/index.js';
 import { TUNING as T } from '../data/tuning.js';
 import heroURL from '../../assets/side/act-hero-atlas.webp';
-import bossURL from '../../assets/side/rivals.webp';
+import bossURL from '../../assets/side/atlas-boss.webp';
 import backgroundURL from '../../assets/side/atlas-backgrounds.webp';
 const image=url=>new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=reject;im.src=url;});
 export class Renderer {
@@ -23,17 +23,17 @@ export class Renderer {
   const draw=this.c.drawImage.bind(this.c);this.c.drawImage=(...a)=>{this.metrics.drawImages++;draw(...a);};
   bus.on('state.change',()=>{this.camera.ready=false;this.terrain.clear();});
  }
- async init(){const [h,b,bg]=await Promise.all([image(heroURL),image(bossURL),image(backgroundURL)]);this.hero=prepareHero(h);this.bossView=new BossRenderer(b);this.backdrop=bg;this.resize();}
+ async init(){const [h,b,bg]=await Promise.all([image(heroURL),image(bossURL),image(backgroundURL)]);this.hero=prepareHero(h);this.bossView=new BossRenderer(b);this.backdrop=prepareBackdrops(bg);this.resize();}
  resize(){const cssScale=this.canvas.getBoundingClientRect().width/VIEW.w;const dpr=Math.min(VIEW.dpr,Math.max(1,cssScale)*(globalThis.devicePixelRatio||1));this.canvas.width=Math.round(VIEW.w*dpr);this.canvas.height=Math.round(VIEW.h*dpr);this.dpr=dpr;}
  step(g,dt){this.clock+=dt;this.camera.step(g,dt,this.settings);this.animator.step(g.player,dt);this.fx.step(dt);}
  draw(g,alpha,mode,meta){
   const start=performance.now(),c=this.c,cam=this.camera;
-  this.metrics.drawImages=0;c.setTransform(this.dpr,0,0,this.dpr,0,0);c.lineJoin='round';c.lineCap='round';
+  this.metrics.drawImages=0;c.setTransform(this.dpr,0,0,this.dpr,0,0);c.lineJoin='round';c.lineCap='round';c._jgContrast=this.settings.contrast;
   if(['TITLE','ORDERS','SHOP','JOURNAL','DAWN'].includes(mode)||mode==='SETTINGS'&&g.state==='TITLE'){
    workplace(c,this.hero,this.clock,meta.data.souvenirs);this.metrics.drawMs=performance.now()-start;return;
   }
   background(c,g,cam,this.clock,this.backdrop);cam.begin(c);
-  landmarks(c,g,cam,this.clock);this.terrain.draw(c,g.scene,cam,g.level.palette,g.scene.layer==='deep');gates(c,g,cam);hazards(c,g,cam);
+  landmarks(c,g,cam,this.clock);this.terrain.draw(c,g.scene,cam,g.level.palette,g.scene.layer==='deep',this.settings.contrast);gates(c,g,cam);hazards(c,g,cam);
   objectives(c,g,cam,this.clock);
   for(const f of g.fish)if(cam.visible(f.x,f.y,f.r))fish(c,f,g.level.palette,this.clock,this.settings.contrast);
   for(const f of g.entities.nightmares||[])if(cam.visible(f.x,f.y,f.r))fish(c,f,g.level.palette,this.clock,this.settings.contrast);
@@ -68,4 +68,3 @@ export class Renderer {
   c.font='11px "Microsoft YaHei UI"';c.fillText('Esc · 跳过片刻',VIEW.w/2,VIEW.h-25);
  }
 }
-

@@ -2,10 +2,10 @@ import { P } from './palette.js';
 import { SPECIES, text } from '../data/index.js';
 const TAU=Math.PI*2;
 export function ellipse(c,x,y,rx,ry,color,stroke=P.ink,width=2){
- c.beginPath();c.ellipse(x,y,Math.max(.1,rx),Math.max(.1,ry),0,0,TAU);c.fillStyle=color;c.fill();if(stroke){c.strokeStyle=stroke;c.lineWidth=width;c.stroke();}
+ c.beginPath();c.ellipse(x,y,Math.max(.1,rx),Math.max(.1,ry),0,0,TAU);c.fillStyle=color;c.fill();if(stroke){c.strokeStyle=stroke;c.lineWidth=width*(c._jgContrast?1.5:1);c.stroke();}
 }
 export function poly(c,points,color,stroke=P.ink,width=2){
- c.beginPath();c.moveTo(points[0][0],points[0][1]);for(let i=1;i<points.length;i++)c.lineTo(points[i][0],points[i][1]);c.closePath();c.fillStyle=color;c.fill();if(stroke){c.strokeStyle=stroke;c.lineWidth=width;c.stroke();}
+ c.beginPath();c.moveTo(points[0][0],points[0][1]);for(let i=1;i<points.length;i++)c.lineTo(points[i][0],points[i][1]);c.closePath();c.fillStyle=color;c.fill();if(stroke){c.strokeStyle=stroke;c.lineWidth=width*(c._jgContrast?1.5:1);c.stroke();}
 }
 export function fish(c,f,pal,time,contrast){
  if(f.eaten||f.hp<=0||f.respawn>0)return;
@@ -106,4 +106,3 @@ export function instrument(c,p,pal,time){
  if(ready){c.strokeStyle=P.dream;c.lineWidth=2;c.beginPath();c.arc(0,0,42+Math.sin(time*2)*3,0,TAU);c.stroke();}
  c.restore();
 }
-
