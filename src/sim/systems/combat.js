@@ -29,7 +29,14 @@ export function resolveBossGate(game, quality) {
     b.resist = T.boss.missResist; b.recovery = 0; b.state = 'counter';
     const skill = b.spec.skills.find(s => s.key === b.spec.counterSkill) ?? b.spec.skills[0]; beginAttack(game, skill);
   }
-  game.emit('boss.gate.result', { key: b.key, phase: b.phase, quality, duration: b.gateOpen }); return true;
+  const awakening = b.key === 'claude' && b.phase === 3 && quality === 'Perfect' && game.awakeningUnlocked && !game.awakeningPlayed;
+  game.emit('boss.gate.result', { key: b.key, phase: b.phase, quality, duration: b.gateOpen, awakening });
+  if (awakening) {
+    game.awakeningPlayed = true;
+    game.emit('awakening', { boss: b.key, key: b.key, phase: b.phase, quality, time: game.time, duration: T.awakening.duration,
+      melodies: ['grok','qwen','gemini','zhipu','claude'] });
+  }
+  return true;
 }
 function nextPhase(game) {
   const b = game.boss;
@@ -39,7 +46,7 @@ function nextPhase(game) {
 }
 export function hitBoss(game) {
   const b = game.boss, p = game.player;
-  if (!b || b.down || b.invuln > 0 || b.gate || p.biteWindow <= 0 || p.hitIds.has('boss')) return;
+  if (!b || b.down || b.hidden > 0 || b.invuln > 0 || b.gate || p.biteWindow <= 0 || p.hitIds.has('boss')) return;
   if (distance(b, p) > b.r + T.tiers[p.tier].reach + T.bite.reachBonus) return;
   p.hitIds.add('boss');
   if (p.tier < T.boss.tierMin) { game.emit('notify', { text: '长到水缸级才能伤到她', ttl: 2 }); return; }
@@ -60,7 +67,7 @@ export function defeatBoss(game) {
   b.down = true; b.hp = 0; b.attack = null; b.gate = null; b.bullets.length = 0; b.areas.length = 0;
   b.state = 'defeated'; b.defeatTimer = T.run.defeat; game.cancelHeld();
   game.stats.downs[b.key] = (game.stats.downs[b.key] ?? 0) + 1;
-  game.emit('boss.down', { key: b.key, pose: b.spec.defeat.pose, duration: b.defeatTimer });
+  game.emit('boss.down', { key: b.key, ...b.spec.defeat, duration: b.defeatTimer, subtitleAt: b.spec.defeat.lineAt ?? 0 });
 }
 export function tickInstruments(game, dt) {
   const b = game.boss, p = game.player, rule = b.spec.instrument;
@@ -74,7 +81,9 @@ export function tickInstruments(game, dt) {
     b.instrumentHits = b.instrumentHits.filter(hit => game.time - hit.time <= interval);
     const count = new Set(b.instrumentHits.map(hit => hit.id)).size;
     const phase = game.song?.phase ?? 0, beat = Math.abs(phase - Math.round(phase));
-    const sameBeat = beat * (game.song?.beatSeconds ?? .6) <= (game.melodyCount >= 3 ? .11 : .08);
+    const perfectWindow = game.melodyCount >= 3 ? T.song.responsePerfect : T.song.perfect;
+    const sameBeat = b.key === 'zhipu' ? Math.abs(game.time - (b.lastStoneAt ?? -Infinity)) <= perfectWindow
+      : beat * (game.song?.beatSeconds ?? .6) <= perfectWindow;
     const success = count >= (rule.required ?? 1) && (b.key !== 'claude' || (p.singing && sameBeat));
     let stun = rule.singleStun ?? (b.key === 'qwen' ? .4 : b.key === 'claude' ? .5 : 0);
     if (success) { stun = b.key === 'claude' ? rule.onSameBeatSong.vulnerable : Math.max(rule.stun ?? 0, rule.vulnerable ?? 0); if (b.key === 'zhipu' && sameBeat) stun = rule.onSameBeat.stopAttacks; b.instrumentHits.length = 0; }

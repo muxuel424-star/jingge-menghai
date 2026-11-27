@@ -11,4 +11,3 @@ export function createPlayer(spawn, meta = {}, delivered = 0) {
     combo: 0, comboTimer: 0, satiety: 0, frenzy: 0, buffs: [], shield: 0, songCooldown: 0,
   };
 }
-export default createPlayer;

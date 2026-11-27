@@ -1,0 +1,60 @@
+{
+  "method": "esbuild dependency graph and tree-shaken active JS, compiler strips source comments; static index.html visible/ARIA/title text included. No retired src/side or old entry points.",
+  "entry": "src/main.js",
+  "activeModules": 71,
+  "javascriptChinese": 2356,
+  "htmlChinese": 28,
+  "totalChinese": 2384,
+  "limit": 2500,
+  "passed": true,
+  "perFile": [
+    {
+      "file": "src/data/tuning.js",
+      "chinese": 6
+    },
+    {
+      "file": "src/data/dialogue.js",
+      "chinese": 1989
+    },
+    {
+      "file": "src/sim/systems/world.js",
+      "chinese": 10
+    },
+    {
+      "file": "src/sim/systems/items.js",
+      "chinese": 9
+    },
+    {
+      "file": "src/sim/systems/ecology.js",
+      "chinese": 7
+    },
+    {
+      "file": "src/sim/systems/combat.js",
+      "chinese": 41
+    },
+    {
+      "file": "src/sim/game.js",
+      "chinese": 22
+    },
+    {
+      "file": "src/data/meta.js",
+      "chinese": 168
+    },
+    {
+      "file": "src/render/fx.js",
+      "chinese": 9
+    },
+    {
+      "file": "src/render/hud.js",
+      "chinese": 55
+    },
+    {
+      "file": "src/render/world.js",
+      "chinese": 27
+    },
+    {
+      "file": "src/main.js",
+      "chinese": 13
+    }
+  ]
+}

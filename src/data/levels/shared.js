@@ -1,3 +1,4 @@
+import { SEA } from '../palette.js';
 // Layouts are authored in the five level files, never randomized.
 // 05's six surface beats total 450s; 02's 360s rift fallback wins at runtime.
 // Timings describe content goals; swimming is never artificially held behind a timer.
@@ -45,7 +46,7 @@ function onPath(path, x) {
 }
 
 function supplies(width, keys, offset, path) {
-  return keys.map((key, i) => ({ key, id: `${offset}-supply-${i}`, ...onPath(path, 400 + (width - 800) * i / (keys.length - 1)) }));
+  return keys.map((key, i) => ({ key, supply: true, bossSupply: offset === 'deep' && i === keys.length - 1, id: `${offset}-supply-${i}`, ...onPath(path, 400 + (width - 800) * i / (keys.length - 1)) }));
 }
 
 function blocksAnchor(solid, anchor, radius) {
@@ -79,6 +80,19 @@ function layerShortcuts(shortcuts, path, solids) {
   return shortcuts.map(shortcut => ({ ...shortcut, from: branchAnchor(shortcut.from, path, solids), to: branchAnchor(shortcut.to, path, solids) }));
 }
 
+function shortcutLatch(shortcuts, path) {
+  const clearance = shortcut => Math.min(...path.slice(1).map((b, index) => {
+    const a = path[index], dx = b[0] - a[0], dy = b[1] - a[1], p = shortcut.from;
+    const t = Math.max(0, Math.min(1, ((p.x - a[0]) * dx + (p.y - a[1]) * dy) / Math.max(1, dx * dx + dy * dy)));
+    return Math.hypot(p.x - a[0] - dx * t, p.y - a[1] - dy * t);
+  }));
+  const entrance = [...shortcuts].sort((a, b) => clearance(b) - clearance(a))[0];
+  return [{ id: 'shortcut-latch', key: 'fragile', shape: 'ellipse', ...entrance.from,
+    w: TUNING.terrain.fragileWidth, h: TUNING.terrain.fragileHeight,
+    rx: TUNING.terrain.fragileWidth / 2, ry: TUNING.terrain.fragileHeight / 2, hp: TUNING.terrain.fragileHits, maxHp: TUNING.terrain.fragileHits }];
+}
+
+/** @returns {import('../schema.js').Level} */
 export function defineLevel(spec) {
   const { level, width, surfaceRanges: ranges } = spec;
   const surfaceBeats = ranges.slice(0, -1).map((from, i) => {
@@ -137,5 +151,7 @@ export function defineLevel(spec) {
     shortcuts: layerShortcuts(spec.shortcuts, spec.deepPath, spec.deepSolids), landmarks: spec.deepMotifs.map((kind, i) => ({ kind, x: (cuts[i] + cuts[i + 1]) / 2, y: spec.deepY[i] })),
     loop: spec.loop ?? null, instruments: [],
   };
-  return { key: spec.key, level, pressure: level, nameKey: `level.${level}.name`, client: { nameKey: `level.${level}.client`, lineKey: `level.${level}.line`, summaryKey: `level.${level}.summary` }, palette: spec.palette, boss: spec.boss, surface, deep, surfaceBeats, deepBeats, fragments, targetSeconds: 900 };
+  surface.breakables = shortcutLatch(surface.shortcuts, spec.surfacePath);
+  deep.breakables = shortcutLatch(deep.shortcuts, spec.deepPath);
+  return { key: spec.key, level, pressure: level, nameKey: `level.${level}.name`, client: { nameKey: `level.${level}.client`, lineKey: `level.${level}.line`, summaryKey: `level.${level}.summary` }, palette: SEA[level - 1], boss: spec.boss, surface, deep, surfaceBeats, deepBeats, fragments, targetSeconds: 900 };
 }

@@ -8,19 +8,21 @@ function beam(pal){
  c.fillStyle=g;c.fillRect(0,0,300,720);return canvas;
 }
 export function prepareBackdrops(atlas){
- const rows=[],h=atlas.height/5;
- for(let row=0;row<5;row++){
-  const canvas=document.createElement('canvas');canvas.width=atlas.width;canvas.height=h;
-  const ctx=canvas.getContext('2d');ctx.drawImage(atlas,0,row*h,atlas.width,h,0,0,atlas.width,h);
-  const pixels=ctx.getImageData(0,0,canvas.width,canvas.height);
-  for(let y=0;y<canvas.height;y++){
-   const alpha=Math.min(1,y/24,(canvas.height-1-y)/5);
-   if(alpha>=1)continue;
-   for(let x=0;x<canvas.width;x++)pixels.data[(y*canvas.width+x)*4+3]*=alpha;
+ const grade=document.createElement('canvas');grade.width=1920;grade.height=1080;
+ const ctx=grade.getContext('2d'),beams=SEA.map(beam);
+ let current=-1,deepGrade=false;
+ return {
+  beams,
+  layer(index,deep){
+   if(current!==index||deepGrade!==deep){
+    current=index;deepGrade=deep;
+    // Grade only when entering a layer. Grading the full image every frame allocates large GPU surfaces.
+    ctx.filter=deep?'brightness(.82) contrast(1.25)':'brightness(1.12)';
+    ctx.drawImage(atlas[index],0,0,grade.width,grade.height);ctx.filter='none';
+   }
+   return grade;
   }
-  ctx.putImageData(pixels,0,0);canvas.beam=beam(SEA[row]);rows.push(canvas);
- }
- return rows;
+ };
 }
 function ridge(c,g,cam,factor,ceiling,color){
  const size=190,ox=cam.x*factor,first=Math.floor((ox-VIEW.w/2)/size)-1;
@@ -39,13 +41,15 @@ export function background(c,g,cam,time,atlas){
  c.fillStyle=deep?mix(pal.base,P.ink,.35):pal.base;c.fillRect(0,0,VIEW.w,VIEW.h);
  ridge(c,g,cam,.13,false,mix(pal.mid,pal.base,.84));
  if(atlas){
-  const row=atlas[g.level.level-1],h=190,w=row.width/row.height*h;
-  const offset=Math.max(0,Math.min(w-VIEW.w,cam.x*.17));
-  c.save();c.globalAlpha=deep?.5:.67;c.drawImage(row,-offset,VIEW.h-h-105-cam.y*.025,w,h);c.restore();
-  c.save();c.translate(VIEW.w*.75-cam.x*.025%220,-80);c.rotate(.26);c.drawImage(row.beam,-150,0);c.restore();
+  const index=g.level.level-1,row=atlas.layer(index,deep),h=VIEW.h*1.5;
+  if(row){
+   const w=row.width/row.height*h,offset=Math.max(0,Math.min(w-VIEW.w,cam.x*.2));
+   c.save();c.globalAlpha=deep?.48:.62;c.drawImage(row,-offset,(VIEW.h-h)/2-cam.y*.05,w,h);c.restore();
+  }
+  c.save();c.translate(VIEW.w*.75-cam.x*.025%220,-80);c.rotate(.26);c.drawImage(atlas.beams[index],-150,0);c.restore();
  }
- ridge(c,g,cam,.26,false,mix(pal.base,P.ink,.22));
- ridge(c,g,cam,.22,true,mix(pal.base,P.ink,.25));
+ ridge(c,g,cam,.5,false,mix(pal.base,P.ink,.22));
+ ridge(c,g,cam,.5,true,mix(pal.base,P.ink,.25));
  for(let i=0;i<24;i++){
   const x=((i*193.7-cam.x*.2)%VIEW.w+VIEW.w)%VIEW.w;
   const y=((i*67-time*(3+i%3)-cam.y*.12)%VIEW.h+VIEW.h)%VIEW.h;

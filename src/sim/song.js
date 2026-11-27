@@ -1,12 +1,14 @@
 import { TUNING } from '../data/tuning.js';
 import { SONG_DEFAULTS } from '../data/audio.js';
+import { RNG } from './rng.js';
 
 /** Pure rhythm state. Every time is simulation seconds; no browser/audio clocks. */
 export class Song {
-  constructor({ bus, emit, onEvent, level = 1, echo = 0, tuning = {} } = {}) {
+  constructor({ bus, emit, onEvent, level = 1, echo = 0, tuning = {}, rng } = {}) {
     this.emit = onEvent ?? emit ?? ((name, data) => bus?.emit(name, data));
     this.config = { ...SONG_DEFAULTS, ...TUNING.song, ...tuning };
     this.level = level;
+    this.rng = rng ?? new RNG(level);
     this.echo = echo;
     this.clock = 0;
     this.age = 0;
@@ -21,6 +23,7 @@ export class Song {
     this.beat = 0;
     this.phase = 0;
     this.response = false;
+    this.noteSteps = [];
     this.x = this.y = 0;
   }
 
@@ -38,6 +41,10 @@ export class Song {
     this.beat = 0;
     this.startedAt = this.clock;
     this.response = !!options.response;
+    this.noteSteps = [this.rng.int(0, this.config.beats)];
+    for (let beat = 1; beat <= Math.ceil(this.config.beats * this.config.maxPhrases); beat++) {
+      this.noteSteps.push((this.noteSteps[beat - 1] + (this.rng.int(0, 1) ? 1 : -1) + 5) % 5);
+    }
     this.x = options.x ?? this.x;
     this.y = options.y ?? this.y;
     this.emit('song.start', this.payload({ beat: 0, response: this.response }));
@@ -122,6 +129,8 @@ export class Song {
 
   payload(extra = {}) {
     return { x: this.x, y: this.y, age: this.age, radius: this.radius,
+      clock: this.clock, startedAt: this.startedAt, noteSteps: this.noteSteps,
+      maxPhrases: this.config.maxPhrases, beats: this.config.beats,
       level: this.level, bpm: this.config.bpm, ...extra };
   }
 }

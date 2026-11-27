@@ -67,6 +67,13 @@ export class MusicSystem {
     if (!this.engine.ctx) return;
     const now = this.engine.ctx.currentTime;
     this.silenceUntil = now + MIX.phaseSilence;
+    // The convolution tail is shared: zeroing only stem sends leaves old music
+    // audible inside the vacuum. The new whale remains audible on its dry bus.
+    const reverb = this.engine.reverbOut.gain;
+    reverb.cancelScheduledValues(now);
+    reverb.setValueAtTime(0, now);
+    reverb.setValueAtTime(0, this.silenceUntil);
+    reverb.linearRampToValueAtTime(MIX.reverb, this.silenceUntil + MIX.release);
     for (const channel of Object.values(this.channels)) {
       for (const node of [channel.dry, channel.wet]) {
         node.gain.cancelScheduledValues(now);

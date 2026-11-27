@@ -53,13 +53,14 @@ for (const level of LEVELS) {
     const scene = level[layer];
     test(`${level.key}/${layer}: the largest body can follow every authored route segment`, () => {
       const terrain = new Terrain(scene);
+      const corridorRadius = largestRadius * TUNING.terrain.pathBodyWidths;
       for (let i = 1; i < scene.mainPath.length; i++) {
         const a = scene.mainPath[i - 1], b = scene.mainPath[i];
         const samples = Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 20);
         for (let j = 0; j <= samples; j++) {
           const x = a.x + (b.x - a.x) * j / samples;
           const y = a.y + (b.y - a.y) * j / samples;
-          assert.equal(terrain.contains(x, y, largestRadius, 2), false, `segment ${i} at ${x},${y}`);
+          assert.equal(terrain.contains(x, y, corridorRadius, 2), false, `2.5-body corridor segment ${i} at ${x},${y}`);
         }
       }
     });
@@ -103,7 +104,13 @@ for (const level of LEVELS) {
       ]);
       const points = [...scene.pickups, ...(scene.fragments ?? []), ...(scene.melodies ?? []), ...shortcutPoints, scene.souvenir, scene.exit, scene.well].filter(Boolean);
       for (const position of points) {
-        assert.equal(terrain.contains(position.x, position.y, largestRadius, 2), false, `inside terrain: ${position.id ?? position.key}`);
+        // Optional shortcut mouths can have a two-lunge latch. The approach
+        // must be reachable before it breaks; its destination must be clear
+        // afterwards. The dedicated simulation test verifies both lunges.
+        const latch = scene.breakables?.find(block => Math.hypot(block.x - position.x, block.y - position.y) < 1);
+        const targetTerrain = latch ? new Terrain({ ...scene, breakables: [] }) : terrain;
+        if (latch) assert.match(String(position.id), /^shortcut-\d-from$/);
+        assert.equal(targetTerrain.contains(position.x, position.y, largestRadius, 2), false, `inside terrain: ${position.id ?? position.key}`);
         const index = nearestOpen(position);
         assert.ok(index >= 0 && visited[index], `unreachable: ${position.id ?? position.key} at ${position.x},${position.y}`);
       }

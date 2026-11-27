@@ -1,5 +1,5 @@
 import { P } from './palette.js';
-import { ellipse,poly,pickup } from './sprites.js';
+import { ellipse,poly,pickup,landmarkSprite } from './sprites.js';
 const TAU=Math.PI*2;
 export function hazards(c,g,cam){
  const pal=g.level.palette;
@@ -39,8 +39,7 @@ export function hazards(c,g,cam){
 export function objectives(c,g,cam,time){
  const pal=g.level.palette,p=g.player,scene=g.scene;c.font='11px "Microsoft YaHei UI"';c.fillStyle=P.bone;c.textAlign='center';
  if(scene.well&&cam.visible(scene.well.x,scene.well.y,80)){
-  const w=scene.well;ellipse(c,w.x,w.y+30,55,20,pal.mid);poly(c,[[w.x-50,w.y+15],[w.x-50,w.y+45],[w.x+50,w.y+45],[w.x+50,w.y+15]],pal.mid);
-  ellipse(c,w.x,w.y+10,54,17,P.bone);ellipse(c,w.x,w.y+9,42,10,P.dream);
+  const w=scene.well;landmarkSprite(c,0,w.x,w.y+12,147);
   c.strokeStyle=P.dream;c.lineWidth=2;for(let i=0;i<2;i++){c.beginPath();c.ellipse(w.x,w.y-20-i*18,28+i*7,6,0,0,TAU);c.stroke();}
   if(Math.hypot(p.x-w.x,p.y-w.y)<220){c.fillStyle=P.bone;c.fillText('月光井 · 梦链送到这里',w.x,w.y-75);}
  }
@@ -69,4 +68,3 @@ export function objectives(c,g,cam,time){
   c.fillStyle=P.bone;c.strokeStyle=P.ink;c.lineWidth=2;c.fillRect(souvenir.x-14,souvenir.y-10,28,20);c.strokeRect(souvenir.x-14,souvenir.y-10,28,20);
  }
 }
-

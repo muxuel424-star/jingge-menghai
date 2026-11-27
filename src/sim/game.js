@@ -7,10 +7,11 @@ import { createPlayer } from './entities/player.js';
 import { createFish } from './entities/fish.js';
 import { createBoss } from './entities/boss.js';
 import { clamp, normalize, distance } from './math.js';
-import { setupWorld, respawnFish, enforceTierGates } from './systems/world.js';
+import { setupWorld, respawnFish, enforceTierGates, tickBreakables } from './systems/world.js';
 import { movePlayer, tickResources } from './systems/movement.js';
 import { tickItems, applyItem } from './systems/items.js';
 import { tickFish, tickNightmares } from './systems/ecology.js';
+import { tickEmergence } from './systems/emergence.js';
 import { startBite, tickFeeding, eat } from './systems/feeding.js';
 import { tickDreams, applySongRelease } from './systems/dreams.js';
 import { tickHazards } from './systems/hazards.js';
@@ -39,8 +40,19 @@ export class Game {
   get songRadius() { return this.song?.radius ?? T.song.radius; }
   get chain() { return this.entities.dreamChain; }
   get buffs() { return this.player.buffs; }
+  get assisted() { return Boolean(this.meta.settings?.assistance && this.meta.levels?.[this.level.level]?.failures >= T.assistance.requiredFailures); }
+  get stabilityPressure() { return T.pressure[Math.max(0, this.pressure - 1 - (this.assisted ? T.assistance.pressureReduction : 0))].stability; }
+  get damageMultiplier() { return this.assisted ? this.stabilityPressure / this.pressureConfig.stability : 1; }
+  get awakeningUnlocked() {
+    if (this.meta.unlocks?.awakening) return true;
+    return LEVELS.every(level => {
+      if (level.level === this.level.level && this.melodyCount >= T.awakening.fragmentsPerDream) return true;
+      const saved = this.meta.levels?.[level.level];
+      return new Set(saved?.melodyIds ?? []).size >= T.awakening.fragmentsPerDream || saved?.melody >= T.awakening.fragmentsPerDream;
+    });
+  }
   setPressure() { this.pressure = clamp(this.level.pressure, 1, T.pressure.length); this.pressureConfig = T.pressure[this.pressure - 1]; }
-  createSong() { this.song = new Song({ level: this.level.level, echo: this.meta.upg?.echo ?? 0, onEvent: (type, payload) => this.onSong(type, payload) }); }
+  createSong() { this.song = new Song({ level: this.level.level, rng: this.rng, echo: this.meta.upg?.echo ?? 0, onEvent: (type, payload) => this.onSong(type, payload) }); }
   emit(type, payload = {}) { this.events.push({ type, ...payload }); this.bus.emit(type, payload); }
   onSong(type, payload) {
     this.emit(type, payload);
@@ -77,11 +89,11 @@ export class Game {
     this.cancelHeld(); this.level = findLevel(key); this.levelKey = this.level.key; this.setPressure();
     this.rng = new RNG(this.seed); this.runSerial++; this.nextId = 1; this.events.length = 0;
     this.storyFragments = fragments; this.melodies = melodies; this.seen = new Set(); this.usedShortcuts = new Set();
-    this.stats = createStats(); this.stats.fragments = fragments.size; this.stats.melodies = melodies.size;
+    this.stats = createStats();
     this.delivered = delivered; this.pearls = 0; this.result = null; this.ended = false; this.boss = null;
     this.time = 0; this.surfaceTime = 0; this.deepTime = 0; this.stateTime = 0; this.accumulator = 0; this.descentTime = 0;
     this.conditions = {}; this.stillTime = 0; this.loopCount = 0; this.hitstop = 0; this.evolutionTimer = 0; this.counterkill = null; this.souvenir = null; this.targetGrace = 0; this.lastGateHint = -Infinity;
-    this.currentBeat = null; this.taught = new Set();
+    this.currentBeat = null; this.taught = new Set(); this.awakeningPlayed = false;
     this.player = createPlayer(this.level.surface.spawn, this.meta); this.createSong();
     setupWorld(this, this.level.surface); this.missions = chooseMissions(this); this.riftOpen = false;
     this.state = STATES.TITLE; this.transition(retry ? STATES.DESCENT : STATES.BRIEF); return this;
@@ -122,7 +134,7 @@ export class Game {
   collectMelody(id) {
     if (this.melodies.has(id)) return false;
     this.melodies.add(id); const melody = this.entities.melodies.find(m => m.id === id); if (melody) melody.collected = true;
-    this.stats.melodies = this.melodyCount; this.emit('melody.collect', { id, count: this.melodyCount, x: melody?.x ?? this.player.x, y: melody?.y ?? this.player.y }); return true;
+    this.stats.melodies++; this.emit('melody.collect', { id, count: this.melodyCount, x: melody?.x ?? this.player.x, y: melody?.y ?? this.player.y }); return true;
   }
   checkCondition(condition) {
     if (!condition) return true;
@@ -142,7 +154,7 @@ export class Game {
   }
   addMem(amount, food, kind = 'fry') {
     const p = this.player;
-    p.mem += amount;
+    p.mem += amount * (this.state === STATES.DEEP && kind !== 'song' && this.storyCount >= T.collection.completeFragments ? 1 + T.collection.memBonus : 1);
     if (kind !== 'song') {
       p.stability = Math.min(100, p.stability + food); p.hp = Math.min(p.maxHp, p.hp + T.player.hpPerFood);
       p.combo = p.comboTimer > 0 ? p.combo + 1 : 1; p.comboTimer = T.combo.window;
@@ -162,7 +174,7 @@ export class Game {
     const p = this.player;
     if (this.ended || p.invuln > 0 || this.counterkill || this.boss?.down) return false;
     if (p.shield > 0) { p.shield--; p.invuln = .85; this.emit('shield.break', { charges: p.shield, x: p.x, y: p.y }); return false; }
-    const damage = amount * (p.singing ? T.player.hurtMulWhileSinging : 1);
+    const damage = amount * this.damageMultiplier * (p.singing ? T.player.hurtMulWhileSinging : 1);
     p.hp = Math.max(0, p.hp - damage); p.invuln = T.player.iframeHit; p.hurtTimer = T.player.iframeHit;
     const direction = source ? normalize(p.x - source.x, p.y - source.y) : { x: -p.dir, y: 0 };
     p.vx = direction.x * T.player.hurtKnock; p.vy = direction.y * T.player.hurtKnock + T.player.hurtLift;
@@ -204,6 +216,7 @@ export class Game {
     if (this.evolutionTimer > 0) { this.evolutionTimer = Math.max(0, this.evolutionTimer - dt); return; }
     if (this.hitstop > 0) { this.hitstop = Math.max(0, this.hitstop - dt); return; }
     this.targetGrace = Math.max(0, (this.targetGrace ?? 0) - dt);
+    tickEmergence(this, dt);
     if (this.boss?.down) { tickBoss(this, dt); return; }
     if (this.state === STATES.BOSS && this.boss.state === 'intro' && this.boss.timer < T.boss.intro) { tickBoss(this, dt); return; }
     this.time += dt;
@@ -214,6 +227,7 @@ export class Game {
     tickResources(this, dt); if (this.ended) return;
     if (this.input.bite) startBite(this);
     movePlayer(this, dt, this.input); enforceTierGates(this);
+    tickBreakables(this);
     tickItems(this, dt); tickHazards(this, dt);
     if (this.state === STATES.BOSS) { tickBoss(this, dt); if (!this.ended) tickFeeding(this); }
     else { tickFish(this, dt); tickNightmares(this, dt); tickFeeding(this); tickDreams(this, dt); respawnFish(this, dt); }
@@ -229,4 +243,3 @@ export class Game {
   }
 }
 export { Game as CampaignGame };
-export default Game;

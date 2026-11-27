@@ -4,7 +4,7 @@
 
 大肥鱼在鲸宫值夜班，替睡不着的人送梦。五张派工单对应五个独立梦境，每一夜按「浅梦送梦 → 潜梦 → 深梦捕食成长 → 安抚前辈 → 日报领薪」推进。重玩可以从潜梦开始。
 
-最近的[地形与动作改进](docs/VISUAL-POLISH.md)补齐了自然礁岸、五海材质与环境细节，并加入连续动作插值、平滑转身，修复自动吞小鱼顿帧和挥空抖屏。
+2.2 补上八组角色动作帧、五海独立远景、专属 Boss 结束演出、生态互动、冒险补给和鲸宫纪念品房间。五关通关记录与待验收项可在[设计完成清单](docs/DESIGN-COMPLETION.md)查看。
 
 ## 操作
 
@@ -12,9 +12,9 @@
 | --- | --- |
 | 游动 | WASD / 方向键 |
 | 冲刺 | Shift |
-| 猛扑 | J，可按住连续使用 |
-| 鲸歌 | 按住 F（或空格）唱四拍，圆环合拢时松开 |
-| 海图 | Tab |
+| 猛扑 | J / 鼠标左键，可按住连续使用 |
+| 鲸歌 | 按住 F、空格或鼠标右键唱四拍，圆环合拢时松开 |
+| 海图 | Tab / 屏幕右上的海图按钮 |
 | 暂停 / 潜梦跳过片刻 | Esc |
 | 静音 | M |
 
@@ -37,6 +37,7 @@ npm run dev
 npm test
 npm run test:replay
 npm run test:smoke
+npm run test:full
 npm run test:shots
 npm run test:audio
 npm run test:perf
@@ -62,4 +63,4 @@ npm run test:motion
 
 `npm run build:pages` 更新 `docs/index.html`。GitHub Pages 从 `main` 分支的 `docs/` 部署。
 
-实现与验收边界见 [v2 改造记录](docs/V2-IMPLEMENTATION.md)。源代码采用 [MIT 许可](LICENSE)，角色设定与参考美术的相关权利归各自权利人。
+实现与验收边界见 [2.2 设计完成清单](docs/DESIGN-COMPLETION.md) 和 [v2 改造记录](docs/V2-IMPLEMENTATION.md)。源代码采用 [MIT 许可](LICENSE)，角色设定与参考美术的相关权利归各自权利人。

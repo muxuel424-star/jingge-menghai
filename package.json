@@ -1,7 +1,7 @@
 {
   "name": "jingge-menghai",
   "private": true,
-  "version": "2.1.1",
+  "version": "2.2.0",
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
@@ -10,7 +10,8 @@
     "test": "node --test",
     "test:replay": "node --test --test-name-pattern=replay test/sim.test.js",
     "test:smoke": "node tools/smoke.cjs",
-    "test:shots": "node tools/smoke.cjs --shots",
+    "test:shots": "node tools/full-run.mjs && node tools/browser-replay.cjs && node tools/visual-check.cjs",
+    "test:full": "node tools/full-run.mjs && node tools/browser-replay.cjs",
     "test:perf": "node tools/perf.cjs",
     "test:audio": "node tools/audio-check.cjs",
     "test:motion": "node tools/motion-check.cjs"

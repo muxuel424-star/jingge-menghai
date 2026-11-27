@@ -16,4 +16,3 @@ export const GEMINI = defineBoss({
 });
 GEMINI.dialogue.hurt = null;
 GEMINI.dialogue.instrument = 'boss.gemini.instrument';
-export default GEMINI;

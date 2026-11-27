@@ -14,4 +14,3 @@ export const GROK = defineBoss({
   ],
   counterSkill: 'hunt', defeat: { pose: 'sit', action: 'untieHair', lineAt: 3.2, dissolve: 'fry', destination: 'schoolGate' },
 });
-export default GROK;

@@ -37,7 +37,7 @@ export function tickDreams(game, dt) {
       fish.y = approach(fish.y, head.y + n.y * T.chain.followGap, T.chain.followSpeed, dt); head = fish;
     }
     if (chain.length && distance(p, game.scene.well) < T.chain.deliveryRadius) {
-      const count = chain.length; game.delivered += count; game.stats.delivered = game.delivered; chain.length = 0;
+      const count = chain.length; game.delivered += count; game.stats.delivered += count; chain.length = 0;
       p.stability = Math.min(100, p.stability + count); game.emit('dream.deliver', { count, total: game.delivered, x: p.x, y: p.y });
     }
     for (const f of game.entities.fragments) {
@@ -45,7 +45,7 @@ export function tickDreams(game, dt) {
       const lamp = p.buffs.some(b => b.key === 'lamp');
       if (f.hidden && !lamp && !game.checkCondition(f.condition)) continue;
       if (!game.checkCondition(f.condition)) continue;
-      f.collected = true; game.storyFragments.add(f.id); game.stats.fragments = game.storyCount;
+      f.collected = true; game.storyFragments.add(f.id); game.stats.fragments++;
       game.emit('fragment.collect', { id: f.id, textKey: f.textKey, x: f.x, y: f.y });
     }
     game.riftOpen = game.storyCount >= 3 || game.surfaceTime >= T.run.riftFallback;
@@ -66,7 +66,8 @@ export function applySongRelease(game, quality, radius = game.songRadius, stun =
   if (quality === 'Perfect') game.stats.perfects++;
   for (const f of game.fish) {
     if (f.eaten || distance(f, p) > radius) continue;
-    if (f.kind === 'tapir') { f.sleep = SPECIES.tapir.sleepDuration; game.stats.tapirsSlept++; game.seen.add('tapir'); if (f.stolen) { game.releaseDreams(f, f.stolen); f.stolen = 0; } }
+    game.seen.add(f.kind);
+    if (f.kind === 'tapir') { if (f.sleep <= 0) game.stats.tapirsSlept++; f.sleep = SPECIES.tapir.sleepDuration; game.seen.add('tapir'); if (f.stolen) { game.releaseDreams(f, f.stolen); f.stolen = 0; } }
     else if (f.kind === 'abyss' && quality === 'Perfect') { f.stun = T.fish.stunPerfect; f.perfectStun = true; }
     else if (f.kind !== 'abyss') f.stun = stun ?? (quality === 'Perfect' ? T.fish.stunPerfect : quality === 'Miss' ? T.song.stun * T.song.missStun : T.fish.stunGood);
   }

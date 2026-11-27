@@ -2,6 +2,7 @@ import { P } from './palette.js';
 import { VIEW } from '../data/render.js';
 import { ellipse,poly } from './sprites.js';
 import { drawCycle } from './animation.js';
+import { room } from './room.js';
 export { background,foreground,prepareBackdrops } from './parallax.js';
 export function gates(c,game,cam){
  const pal=game.level.palette;
@@ -28,6 +29,6 @@ export function workplace(c,hero,time,souvenirs=[]){
  c.save();c.globalAlpha=.08;poly(c,[[770,145],[840,145],[960,540],[535,540]],P.lamp,null);c.restore();
  for(let i=0;i<8;i++){const x=580+(i*43+time*8)%260,y=200+Math.sin(i*2+time)*50;c.globalAlpha=.18;ellipse(c,x,y,7,3,P.dream,null);}
  c.globalAlpha=1;c.fillStyle=P.ink;c.fillRect(0,480,VIEW.w,60);c.fillStyle=P.water;c.fillRect(0,480,VIEW.w,9);
- for(let i=0;i<souvenirs.length;i++)ellipse(c,580+i*40,466,14,12,P.bone);
+ room(c,souvenirs,time);
  if(hero)drawCycle(c,hero.idle,time/hero.idle.duration,655,285+Math.sin(time*2)*3,370,1,1);
 }

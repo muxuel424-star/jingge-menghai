@@ -1,5 +1,5 @@
 import { P } from './palette.js';
-import { ellipse,poly } from './sprites.js';
+import { ellipse,poly,landmarkSprite } from './sprites.js';
 const hash=n=>{const v=Math.sin(n*127.1+311.7)*43758.5453;return v-Math.floor(v);};
 function trimCell(atlas,index){
  const sw=atlas.width/3,sh=atlas.height/2,canvas=document.createElement('canvas');canvas.width=sw;canvas.height=sh;
@@ -90,7 +90,29 @@ export class Scenery {
   if(g.scene.layer==='boss'){
    stamp(c,this.images[theme],g.scene.width*.08,g.scene.height+25,210,.25,1,0);
    stamp(c,this.images[theme],g.scene.width*.92,g.scene.height+20,185,.22,-1,0);
+   this.arena(c,g,pal,theme);
   }
+ }
+ arena(c,g,pal,theme){
+  const {width:w,height:h}=g.scene;
+  c.save();c.globalAlpha=.2;c.strokeStyle=pal.hi;c.lineWidth=3;
+  if(theme===0){
+   landmarkSprite(c,5,w*.08,h*.52,140);landmarkSprite(c,5,w*.92,h*.52,140);
+   for(let i=0;i<4;i++){c.beginPath();c.ellipse(w/2,h*.83,w*(.37-i*.038),h*(.15-i*.022),0,0,Math.PI*2);c.stroke();}
+  }else if(theme===1){
+   this.kiln(c,w/2,h*.5,pal);
+   for(let i=0;i<4;i++){c.beginPath();c.ellipse(w/2,h/2,w*(.51-i*.018),h*(.49-i*.021),0,0,Math.PI*2);c.stroke();}
+  }else if(theme===2){
+   poly(c,[[0,h],[0,h*.84],[w*.3,h*.64],[w*.54,h*.8],[w*.77,h*.64],[w,h*.81],[w,h]],pal.mid,null);
+   c.beginPath();for(let i=1;i<9;i++){const y=h*(.72+i*.027);c.moveTo(w*.06,y);c.lineTo(w*.94,y);}c.stroke();
+  }else if(theme===3){
+   c.translate(w*.12,h*.56);
+   c.beginPath();for(let i=0;i<19;i++){const x=i*w*.76/18,y=i*h*.41/18;c.moveTo(x,0);c.lineTo(x,h*.41);c.moveTo(0,y);c.lineTo(w*.76,y);}c.stroke();
+  }else{
+   landmarkSprite(c,4,w*.5,h*.53,w*.82);
+   for(const s of g.entities.instruments){c.lineWidth=5;c.beginPath();c.moveTo(s.x-s.w/2,s.y);c.lineTo(s.x+s.w/2,s.y);c.stroke();}
+  }
+  c.restore();
  }
  window(c,x,y,size,pal,warm){
   c.save();c.translate(x,y);c.fillStyle=pal.base;c.strokeStyle=pal.mid;c.lineWidth=7;

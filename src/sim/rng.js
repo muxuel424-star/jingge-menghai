@@ -17,4 +17,3 @@ export class RNG {
   clone() { const rng = new RNG(this.seed); rng.state = [...this.state]; return rng; }
 }
 export const createRng = seed => new RNG(seed);
-export default RNG;

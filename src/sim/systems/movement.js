@@ -37,7 +37,7 @@ export function tickResources(game, dt) {
   p.breath = clamp(p.breath + (p.singing ? -T.player.breathDrain : T.player.breathRegen) * dt, 0, p.maxBreath);
   if (p.breath <= 0 && p.singing) game.breakSong();
   if (game.state === 'DEEP') {
-    if (!p.frenzy) p.stability = Math.max(0, p.stability - T.stability.drain * game.pressureConfig.stability * (1 - (game.meta.upg?.belly ?? 0) * T.upgrade.belly) * dt);
+    if (!p.frenzy) p.stability = Math.max(0, p.stability - T.stability.drain * game.stabilityPressure * (1 - (game.meta.upg?.belly ?? 0) * T.upgrade.belly) * dt);
     if (!p.stability) game.finish('FADED');
   }
   if (game.state === 'SURFACE' && p.breath <= 0) {

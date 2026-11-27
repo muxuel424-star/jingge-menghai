@@ -21,3 +21,11 @@
 !/tools/perf.cjs
 !/tools/audio-check.cjs
 !/tools/motion-check.cjs
+!/tools/architecture-check.cjs
+!/tools/audio-freq.cjs
+!/tools/audio-probe.cjs
+!/tools/autoplay.mjs
+!/tools/full-run.mjs
+!/tools/browser-replay.cjs
+!/tools/replay-hash.mjs
+!/tools/visual-check.cjs

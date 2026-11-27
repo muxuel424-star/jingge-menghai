@@ -2,7 +2,6 @@ import { defineLevel, ellipse as e, polygon as p, hazard as h } from './shared.j
 
 export const LEVEL_01 = defineLevel({
   key: 'bay', level: 1, boss: 'grok', width: 6200, wellX: 780,
-  palette: { base: '#123A34', mid: '#2E8B72', hi: '#8FF0DC', soul: '#FFD9A0' },
   surfaceRanges: [0, 900, 1900, 3100, 4400, 5600, 6200], deepRanges: [0, 2400, 4600, 6200],
   routeY: [700, 800, 680, 900, 730, 740], deepY: [800, 750, 850],
   nightmares: [0, 1, 1, 2, 3, 1],
@@ -36,4 +35,3 @@ export const LEVEL_01 = defineLevel({
   shortcuts: [{ id: 0, from: { x: 1800, y: 460 }, to: { x: 3200, y: 460 }, requiresTier: 1, savesSeconds: 30 }, { id: 1, from: { x: 3800, y: 1400 }, to: { x: 5500, y: 1200 }, requiresItem: 'lamp', savesSeconds: 35 }],
   souvenir: 'pencilCase', souvenirPoint: [4050, 1520],
 });
-export default LEVEL_01;

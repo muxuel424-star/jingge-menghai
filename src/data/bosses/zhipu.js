@@ -14,4 +14,3 @@ export const ZHIPU = defineBoss({
   ],
   counterSkill: 'track', defeat: { pose: 'sit', action: 'collectStones', smile: true, dissolve: 'dreamfish' },
 });
-export default ZHIPU;

@@ -7,4 +7,3 @@ export function createFish(kind, x, y, id, rng) {
     armored: kind === 'royal', armorHits: 0, eaten: false, phase: rng.range(0, Math.PI * 2),
     lastBite: -1, stolen: 0, sleep: 0, bounceCd: 0, respawn: 0 };
 }
-export default createFish;

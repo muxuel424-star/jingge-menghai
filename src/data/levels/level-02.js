@@ -2,7 +2,6 @@ import { defineLevel, ellipse as e, polygon as p, hazard as h } from './shared.j
 
 export const LEVEL_02 = defineLevel({
   key: 'porcelain', level: 2, boss: 'qwen', width: 7100, wellX: 1000,
-  palette: { base: '#14283F', mid: '#2F6E9E', hi: '#A9D6F5', soul: '#F2E7CF' },
   surfaceRanges: [0, 1200, 2600, 4000, 5200, 6400, 7100],
   routeY: [720, 880, 820, 850, 750, 700], deepY: [820, 850, 780],
   nightmares: [0, 2, 2, 2, 3, 1],
@@ -24,7 +23,7 @@ export const LEVEL_02 = defineLevel({
   ],
   deepSolids: [
     p([[400, 180], [1100, 220], [1170, 530], [450, 500]]),
-    p([[1320, 420], [2470, 400], [2510, 880], [1360, 920]]),
+    p([[1440, 420], [2400, 400], [2420, 880], [1440, 880]]),
     p([[1400, 1450], [2300, 1450], [2300, 1750], [1400, 1750]]),
     p([[3160, 50], [3450, 50], [3450, 590], [3160, 590]]),
     p([[3160, 1120], [3450, 1120], [3450, 1750], [3160, 1750]]),
@@ -38,4 +37,3 @@ export const LEVEL_02 = defineLevel({
   shortcuts: [{ id: 0, from: { x: 1200, y: 1450 }, to: { x: 2900, y: 1300 }, requiresTier: 1, savesSeconds: 35 }, { id: 1, from: { x: 4450, y: 350 }, to: { x: 6200, y: 350 }, requiresItem: 'haste', savesSeconds: 40 }],
   souvenir: 'halfBowl', souvenirPoint: [4900, 1640],
 });
-export default LEVEL_02;

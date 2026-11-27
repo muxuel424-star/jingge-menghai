@@ -12,6 +12,8 @@ export class AudioEngine {
     this.muted = muted;
     this.level = 1;
     this.voices = new Set();
+    this.stats = { created: 0, ended: 0, peakVoices: 0, peakIssued: 0, dropped: 0,
+      activeNodes: 0, peakNodes: 0, createdNodes: 0, releasedNodes: 0 };
     this.issued = 0;
     this.listener = { x: 0, y: 0, width: 960 };
     this.unsubscribers = [];
@@ -134,14 +136,17 @@ export class AudioEngine {
   tone({ frequency, end, wave = 'sine', duration = .22, volume = .1, delay = 0,
     when = this.ctx?.currentTime ?? 0, wet = .2, bus, pan = 0, filter, attack = MIX.attack,
     detune = 0, vibrato = 0, priority = 1, channel, sustain = false, tonalLevel = this.level } = {}) {
-    if (!this.ctx || volume <= 0 || this.issued >= MIX.voicesPerFrame) return null;
+    if (!this.ctx || volume <= 0) return null;
+    if (this.issued >= MIX.voicesPerFrame) { this.stats.dropped++; return null; }
     if (this.voices.size >= MIX.voices) {
       const expendable = [...this.voices].find(voice => voice.priority < priority);
       expendable?.stop();
       // A fading voice still exists until onended: never briefly create #57.
-      return null;
+      this.stats.dropped++; return null;
     }
     this.issued++;
+    this.stats.created++;
+    this.stats.peakIssued = Math.max(this.stats.peakIssued, this.issued);
     const ctx = this.ctx, start = Math.max(ctx.currentTime, when + delay);
     const stop = start + duration;
     const noisy = wave === 'noise';
@@ -203,9 +208,14 @@ export class AudioEngine {
       try { source.stop(now + MIX.release); lfo?.stop(now + MIX.release); } catch {}
     } };
     this.voices.add(voice);
+    this.stats.activeNodes += nodes.length; this.stats.createdNodes += nodes.length;
+    this.stats.peakNodes = Math.max(this.stats.peakNodes, this.stats.activeNodes);
+    this.stats.peakVoices = Math.max(this.stats.peakVoices, this.voices.size);
     source.onended = () => {
       for (const node of nodes) node.disconnect();
       this.voices.delete(voice);
+      this.stats.ended++;
+      this.stats.activeNodes -= nodes.length; this.stats.releasedNodes += nodes.length;
     };
     source.start(start);
     source.stop(stop + MIX.release);

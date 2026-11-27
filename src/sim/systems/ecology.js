@@ -1,6 +1,7 @@
 import { SPECIES } from '../../data/species.js';
 import { TUNING as T } from '../../data/tuning.js';
 import { distance, normalize, clamp } from '../math.js';
+import { emergence, activeEmergence, corpseTarget, leaveRemains } from './emergence.js';
 const SPECIAL = new Set(['flash','vortex','charge','rush','suction','lungeTell','lunge','open']);
 const enter = (f, action, game) => { f.action = action; f.stateT = 0; f.tellT = (SPECIES[f.kind] ?? SPECIES.fry).actions.find(a => a.key === action)?.tell ?? 0; if (game && f.tellT) game.emit('fish.tell', { kind: f.kind, windup: f.tellT, x: f.x, y: f.y }); };
 function request(game, f, action) {
@@ -26,13 +27,19 @@ export function tickFish(game, dt) {
     const spec = SPECIES[f.kind] ?? SPECIES.fry, d = distance(f, p);
     f.cooldown = Math.max(0, f.cooldown - dt); f.bounceCd = Math.max(0, f.bounceCd - dt);
     if (f.stun > 0) { f.stun = Math.max(0, f.stun - dt); f.tellT = 0; if (!f.stun) { f.perfectStun = false; enter(f, spec.initial); } continue; }
-    if (f.sleep > 0) { f.sleep -= dt; f.action = 'sleep'; if (!f.sleep) enter(f, spec.initial); continue; }
+    if (f.sleep > 0) { f.sleep = Math.max(0, f.sleep - dt); f.action = 'sleep'; if (!f.sleep) enter(f, spec.initial); continue; }
     f.stateT += dt;
     const action = spec.actions.find(a => a.key === f.action) ?? spec.actions[0];
     f.tellT = Math.max(0, (action.tell ?? 0) - f.stateT);
+    const remains = corpseTarget(game, f);
+    if (remains && !SPECIAL.has(f.action)) { chase(f, remains, dt, T.ecology.corpseSpeed); game.terrain.resolve(f, f.r, 2); continue; }
     if (f.kind === 'fry' || f.kind === 'dreamfish') {
-      if (p.dashing && d < T.fish.fleeRadius && f.action !== 'flee') enter(f, 'flee');
-      const lantern = game.fish.find(l => l.kind === 'lantern' && !l.eaten && l.action === 'pulse' && distance(l, f) < SPECIES.lantern.triggerRadius);
+      if (p.dashing && d < T.fish.fleeRadius && f.action !== 'flee') {
+        const school = game.fish.filter(other => !other.eaten && other.kind === f.kind && (f.school ? other.school === f.school : distance(other, f) < T.fish.fleeRadius));
+        const event = emergence(game, 'scatter', f, SPECIES.fry.actions.find(a => a.key === 'flee').duration, school.map(other => other.id));
+        if (event) for (const other of school) enter(other, 'flee');
+      }
+      const lantern = game.fish.find(l => l.kind === 'lantern' && !l.eaten && activeEmergence(game, 'lantern', l) && distance(l, f) < SPECIES.lantern.triggerRadius);
       if (f.action === 'flee') { drift(f, dt, T.tiers[p.tier].speed * spec.fleeSpeedMul, p); if (f.stateT > action.duration) enter(f, 'school'); }
       else if (lure.has(f.id)) chase(f, p, dt, T.fish.lureSpeed);
       else if (lantern) chase(f, lantern, dt, T.fish.frySpeed);
@@ -44,8 +51,9 @@ export function tickFish(game, dt) {
       if (smoke) { drift(f, dt, 12); continue; }
       const tail = game.entities.dreamChain.at(-1), target = tail ?? game.fish.find(a => a.kind === 'dreamfish' && !a.eaten);
       if (target) { chase(f, target, dt, action.speed ?? 38); if (distance(f, target) < f.r && !f.cooldown) {
+        if (!emergence(game, 'steal', f, T.chain.stealCd, [target.id])) continue;
         if (tail) { f.stolen += game.scatterDreams(game.rng.int(...spec.steal), true); game.emit('notify', { text: '它叼走了你的梦', ttl: 2 }); }
-        else { target.eaten = true; target.respawn = T.fish.respawn; f.stolen++; }
+        else { target.eaten = true; target.respawn = T.fish.respawn; f.stolen++; leaveRemains(game, target); }
         f.cooldown = T.chain.stealCd;
       } }
     } else if (f.kind === 'guard') {
@@ -53,7 +61,11 @@ export function tickFish(game, dt) {
       if (f.action === 'open' && f.stateT >= action.tell && d < spec.triggerRadius && (p.x - f.x) * f.dir > 0) game.damagePlayer(spec.dmg, f.kind, f);
       if (action.duration && f.stateT >= action.duration) enter(f, action.next);
     } else if (f.kind === 'lantern') {
-      if (f.action === 'pulse') { drift(f, dt, T.fish.idleSpeed); if (d < spec.triggerRadius && !smoke && !f.cooldown) request(game, f, 'flash'); }
+      if (f.action === 'pulse') {
+        drift(f, dt, T.fish.idleSpeed); f.lureTimer = Math.max(0, (f.lureTimer ?? 0) - dt);
+        if (!f.lureTimer && emergence(game, 'lantern', f, T.ecology.lanternLureDuration)) f.lureTimer = spec.lurePeriod;
+        if (d < spec.triggerRadius && !smoke && !f.cooldown) request(game, f, 'flash');
+      }
       if (f.action === 'flash' && f.stateT >= action.duration) {
         if (d < spec.attackRadius + p.r) game.damagePlayer(spec.dmg, f.kind, f);
         game.emit('fish.attack', { kind: f.kind, x: f.x, y: f.y, radius: spec.attackRadius }); enter(f, 'recover');
@@ -70,11 +82,14 @@ export function tickFish(game, dt) {
       } else if (f.action === 'recover' && f.stateT >= action.duration) { enter(f, 'glide'); f.cooldown = T.fish.mantaCd * game.pressureConfig.fishCd; }
     } else if (f.kind === 'royal') {
       if (f.action === 'guard') { f.dir = p.x >= f.x ? 1 : -1; f.armored = f.armorHits < spec.armorHits; if (d < spec.triggerRadius && !smoke && !f.cooldown) request(game, f, 'charge'); }
-      if (f.action === 'charge' && f.stateT >= action.duration) { f.locked = normalize(p.x - f.x, p.y - f.y); enter(f, 'rush'); }
+      if (f.action === 'charge' && f.stateT >= action.duration) {
+        f.locked = normalize(p.x - f.x, p.y - f.y); enter(f, 'rush');
+        emergence(game, 'royal', f, SPECIES.royal.actions.find(a => a.key === 'rush').duration + spec.ecology.stunDuration);
+      }
       else if (f.action === 'rush') {
         f.x += f.locked.x * action.speed * dt; f.y += f.locked.y * action.speed * dt;
         if (d < f.r + p.r) game.damagePlayer(spec.dmg, f.kind, f);
-        for (const prey of game.fish) if (prey.kind === 'fry' && distance(prey, f) < f.r) prey.stun = spec.ecology.stunDuration;
+        for (const prey of game.fish) if (activeEmergence(game, 'royal', f) && prey.kind === 'fry' && distance(prey, f) < f.r) prey.stun = spec.ecology.stunDuration;
         if (f.stateT >= action.duration) { enter(f, 'recover'); f.armored = false; }
       } else if (f.action === 'recover' && f.stateT >= action.duration) { enter(f, 'guard'); f.cooldown = T.fish.royalCd * game.pressureConfig.fishCd; }
     } else if (f.kind === 'abyss') {
@@ -82,7 +97,11 @@ export function tickFish(game, dt) {
       if (f.action === 'suction' && f.stateT > action.tell) {
         const inCone = (p.x - f.x) * f.dir > 0 && Math.abs(p.y - f.y) < Math.abs(p.x - f.x) * Math.tan(spec.suctionCone);
         if (d < spec.suctionRadius && inCone) { const n = normalize(f.x - p.x, f.y - p.y); p.x += n.x * T.fish.abyssPull * dt; p.y += n.y * T.fish.abyssPull * dt; }
-        for (const prey of game.fish) if (prey !== f && !prey.eaten && distance(prey, f) < spec.suctionRadius && (prey.x - f.x) * f.dir > 0) { chase(prey, f, dt, T.fish.abyssPreyPull); if (distance(prey, f) < f.r * .5) { prey.eaten = true; prey.respawn = T.fish.respawn; } }
+        const foodChain = emergence(game, 'suction', f, Math.max(dt, action.duration - f.stateT));
+        for (const prey of game.fish) if (foodChain && prey !== f && !prey.eaten && distance(prey, f) < spec.suctionRadius && (prey.x - f.x) * f.dir > 0) {
+          chase(prey, f, dt, T.fish.abyssPreyPull);
+          if (distance(prey, f) < f.r * .5) { prey.eaten = true; prey.respawn = T.fish.respawn; leaveRemains(game, prey); }
+        }
       }
       if (f.action === 'lungeTell') f.locked = normalize(p.x - f.x, p.y - f.y);
       if (f.action === 'lunge') { f.x += f.locked.x * action.speed * dt; f.y += f.locked.y * action.speed * dt; if (d < f.r + p.r) game.damagePlayer(spec.dmg, f.kind, f); }
@@ -108,7 +127,7 @@ export function tickNightmares(game, dt) {
       n.action = 'chaseDream'; chase(n, target, dt, T.nightmare.speed * game.pressureConfig.nightmareSpeed);
       if (distance(target, n) < n.r && !n.cooldown) {
         if (chain) game.scatterDreams(T.chain.scatterOnHit);
-        else { target.eaten = true; target.respawn = T.fish.respawn; }
+        else { target.eaten = true; target.respawn = T.fish.respawn; leaveRemains(game, target); }
         n.size = Math.min(T.nightmare.maxSize, n.size + T.chain.growth); n.cooldown = T.chain.stealCd;
       }
     } else { n.action = 'wander'; drift(n, dt, T.fish.idleSpeed); }

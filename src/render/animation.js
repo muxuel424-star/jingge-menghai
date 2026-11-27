@@ -58,11 +58,18 @@ function cycle(image,def,key){
   offsetX:(def.face[0]-A.face[0])*w*A.faceLock,offsetY:(def.face[1]-A.face[1])*h*A.faceLock};
 }
 
-export function prepareHero(atlas){
+export function prepareHeroFrames(sheets){
  const out={};
- Object.entries(A).filter(([,d])=>d?.frames).forEach(([key,def],i)=>{out[key]=cycle(cell(atlas,i,4,2),def,key);});
- // A held dash keeps its hair and tail moving after its initial squeeze/lunge.
- out.dash.steady=cycle(cell(atlas,2,4,2),{...A.dash,samples:12,loop:true,power:.43},'dash');
+ for(const [key,image] of Object.entries(sheets)){
+  const def=A[key],cols=key==='hurt'?2:key==='dash'||key==='bite'||key==='eat'?3:4,rows=Math.ceil(def.frames/cols),frames=[];
+  for(let i=0;i<def.frames;i++){
+   const source=cell(image,i,cols,rows),frame=canvas(A.width+A.margin*2,A.width+A.margin*2),c=frame.getContext('2d');
+   c.imageSmoothingQuality='high';c.drawImage(source,A.margin,A.margin,A.width,A.width);frames.push(frame);
+  }
+  const blend=canvas(A.width+A.margin*2,A.width+A.margin*2);
+  out[key]={frames,w:A.width,h:A.width,margin:A.margin,loop:def.loop,duration:def.frames/def.fps,blend,blendContext:blend.getContext('2d'),offsetX:0,offsetY:0};
+ }
+ out.dash.steady=cycle(cell(sheets.dash,5,3,2),{...A.dash,samples:12,loop:true,power:.43},'dash');
  return out;
 }
 

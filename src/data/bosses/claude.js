@@ -14,4 +14,3 @@ export const CLAUDE = defineBoss({
   ],
   counterSkill: 'rush', defeat: { pose: 'standing', action: 'handoverLamp', handoverDuration: 3, corridorLights: true, dissolve: false },
 });
-export default CLAUDE;

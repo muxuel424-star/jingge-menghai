@@ -10,7 +10,7 @@ const { chromium } = require(require.resolve('playwright', { paths: [project, pa
 (async () => {
   const esbuild = require(path.join(project, 'node_modules/esbuild'));
   const bundle = await esbuild.build({
-    stdin: { contents: "export { AudioEngine } from './src/audio/engine.js';", resolveDir: project },
+    stdin: { contents: "export { AudioEngine } from './src/audio/engine.js'; export { BOSSES } from './src/data/index.js';", resolveDir: project },
     bundle: true, write: false, format: 'iife', globalName: 'WhaleAudio', target: 'chrome120',
   });
   const systemChrome = process.env.CHROME_PATH ?? path.join(process.env.PROGRAMFILES ?? '', 'Google/Chrome/Application/chrome.exe');
@@ -18,7 +18,7 @@ const { chromium } = require(require.resolve('playwright', { paths: [project, pa
   const page = await browser.newPage();
   await page.addScriptTag({ content: bundle.outputFiles[0].text });
   const result = await page.evaluate(async () => {
-    const sampleRate = 32000, seconds = 14;
+    const sampleRate = 32000, seconds = 60;
     const context = new OfflineAudioContext(2, sampleRate * seconds, sampleRate);
     const audio = new WhaleAudio.AudioEngine({ context });
     await audio.init();
@@ -42,8 +42,21 @@ const { chromium } = require(require.resolve('playwright', { paths: [project, pa
       { at: 8.1, name: 'boss.attack', data: { key: 'grok', skill: 'dash' } },
       { at: 8.8, name: 'boss.phase', data: { key: 'grok', phase: 3 } },
       { at: 10, name: 'boss.down', data: { key: 'grok' } });
+    let tellTime = 15;
+    for (const boss of Object.values(WhaleAudio.BOSSES)) for (const skill of boss.skills) {
+      events.push({ at: tellTime, name: 'boss.tell', data: { level: boss.level, key: boss.key, skill: skill.key, pattern: skill.pattern, windup: Math.max(.2, skill.tell) } });
+      tellTime += .75;
+    }
+    for (const [i, kind] of ['thermalVent', 'fallingTimber', 'lightGrate'].entries()) {
+      events.push({ at: 35 + i * 1.2, name: 'env.warn', data: { kind } }, { at: 35.5 + i * 1.2, name: 'env.fire', data: { kind } });
+    }
+    events.push({ at: 39, name: 'item.pickup', data: { key: 'heal' } },
+      { at: 40, name: 'awakening', data: { level: 5, key: 'claude' } },
+      { at: 54, name: 'current.enter', data: { kind: 'current' } });
+    for (let i = 0; i < 20; i++) events.push({ at: 55 + i * .12, name: 'eat', data: { kind: 'fry', combo: i + 1 } });
     events.sort((a, b) => a.at - b.at);
-    let cursor = 0, maxVoices = 0, maxNew = 0, vacuumVerified = false, vacuumValues, time = 1 / 60;
+    let cursor = 0, maxVoices = 0, maxNew = 0, vacuumVerified = false, vacuumValues, time = 1 / 60, nextSample = 1;
+    const nodeSamples = [];
     audio.update(game);
     let suspension = context.suspend(time);
     const render = context.startRendering();
@@ -62,11 +75,16 @@ const { chromium } = require(require.resolve('playwright', { paths: [project, pa
       maxNew = Math.max(maxNew, audio.issued);
       audio.update(game);
       if (context.currentTime > 8.82 && context.currentTime < 8.85) {
-        vacuumValues = Object.fromEntries(Object.entries(audio.music.channels).map(([name, channel]) => [name, channel.dry.gain.value]));
+        vacuumValues = Object.fromEntries(Object.entries(audio.music.channels).flatMap(([name, channel]) => [[name + '.dry', channel.dry.gain.value], [name + '.wet', channel.wet.gain.value]]));
+        vacuumValues.oldReverbTail = audio.reverbOut.gain.value;
         vacuumVerified = Object.values(vacuumValues).every(value => value < .0001);
       }
       maxVoices = Math.max(maxVoices, audio.voices.size);
       maxNew = Math.max(maxNew, audio.issued);
+      if (context.currentTime >= nextSample) {
+        nodeSamples.push({ second: Math.round(context.currentTime), voices: audio.voices.size, sourceNodes: audio.stats.activeNodes,
+          created: audio.stats.created, ended: audio.stats.ended }); nextSample++;
+      }
       time += 1 / 60;
       if (time < seconds - .04) suspension = context.suspend(time);
       await context.resume();
@@ -85,7 +103,10 @@ const { chromium } = require(require.resolve('playwright', { paths: [project, pa
     let binary = '';
     for (let i = 0; i < bytes.length; i += 8192) binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
     const result = { peak, rms: Math.sqrt(sum / (buffer.length * 2)), clipped, maxVoices, maxNew, muteSurvivedResume, vacuumVerified, vacuumValues,
-      voicesAfterRender: audio.voices.size, events: cursor, channels: 2, sampleRate, seconds, pcm: btoa(binary) };
+      voicesAfterRender: audio.voices.size, sourceNodesAfterRender: audio.stats.activeNodes, stats: { ...audio.stats }, nodeSamples,
+      boundedAfterTail: audio.voices.size <= 6 && audio.stats.activeNodes <= 42,
+      nodeAccounting: audio.stats.createdNodes - audio.stats.releasedNodes === audio.stats.activeNodes,
+      events: cursor, channels: 2, sampleRate, seconds, pcm: btoa(binary) };
     audio.destroy();
     return result;
   });
@@ -100,5 +121,6 @@ const { chromium } = require(require.resolve('playwright', { paths: [project, pa
   fs.writeFileSync(path.join(output, 'v2-audio-report.json'), JSON.stringify(result, null, 2));
   console.log(JSON.stringify({ ...result, output }));
   await browser.close();
-  if (result.clipped || result.maxNew > 8 || result.maxVoices > 56 || result.rms < .001 || !result.muteSurvivedResume || !result.vacuumVerified) process.exitCode = 1;
+  if (result.clipped || result.maxNew > 8 || result.maxVoices > 56 || result.rms < .001 || !result.muteSurvivedResume
+    || !result.vacuumVerified || !result.boundedAfterTail || !result.nodeAccounting) process.exitCode = 1;
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -1,6 +1,7 @@
 import { SPECIES } from '../../data/species.js';
 import { TUNING as T } from '../../data/tuning.js';
 import { distance, isBehind } from '../math.js';
+import { leaveRemains } from './emergence.js';
 export function canEat(player, prey, options = {}) {
   if (prey.eaten || prey.kind === 'abyss' || prey.tier < 0 || prey.tier > player.tier) return false;
   if (prey.kind === 'royal' && prey.armored && !isBehind(player, prey) && !options.ignoreArmor) return false;
@@ -16,6 +17,7 @@ export function biteDamage(player, prey) {
 export function eat(game, prey) {
   if (prey.eaten) return;
   const spec = SPECIES[prey.kind]; prey.eaten = true; prey.respawn = T.fish.respawn;
+  leaveRemains(game, prey);
   game.addMem(spec.mem, spec.food, prey.kind);
   game.stats.eaten++; game.stats[prey.kind] = (game.stats[prey.kind] ?? 0) + 1;
   game.seen.add(prey.kind);
@@ -43,7 +45,7 @@ export function tickFeeding(game) {
     }
     if (f.kind === 'royal' && f.armored && !isBehind(p, f) && p.biteWindow > 0 && !p.hitIds.has(f.id) && p.tier >= f.tier) {
       p.hitIds.add(f.id); f.armorHits++; game.emit('bite', { hit: true, target: f.kind, armor: true, x: f.x, y: f.y });
-      if (f.armorHits >= SPECIES.royal.armorHits) { f.armored = false; f.action = 'recover'; f.stateT = 0; }
+      if (f.armorHits >= SPECIES.royal.armorHits) { f.armored = false; f.action = 'recover'; f.stateT = 0; game.emit('fish.crack', { kind: f.kind, x: f.x, y: f.y }); }
       continue;
     }
     if (canEat(p, f) && (f.kind === 'fry' || p.biteWindow > 0)) {

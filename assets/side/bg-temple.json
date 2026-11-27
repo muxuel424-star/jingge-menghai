@@ -1,0 +1,26 @@
+{
+  "anchor": [
+    0.5,
+    0.62
+  ],
+  "pivot": [
+    0.66,
+    0.51
+  ],
+  "size": [
+    2560,
+    1440
+  ],
+  "sourceSize": [
+    1672,
+    941
+  ],
+  "palette": [
+    "#211E19",
+    "#6E5A35",
+    "#FFE6A8",
+    "#FFF7DE"
+  ],
+  "layer": "far",
+  "generated": true
+}

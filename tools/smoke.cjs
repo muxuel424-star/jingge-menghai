@@ -28,7 +28,7 @@ async function runSmoke(args = []) {
     await harness.load();
     record('title loads', (await state()).screen === 'TITLE');
     const idleBefore=await page.evaluate(()=>({clock:__jg2d.renderer.clock,time:__jg2d.game.time}));
-    await page.waitForTimeout(150);
+    await page.waitForFunction(clock=>__jg2d.renderer.clock>clock+.08,idleBefore.clock);
     const idleAfter=await page.evaluate(()=>({clock:__jg2d.renderer.clock,time:__jg2d.game.time}));
     record('palace idle animation runs while menu simulation remains frozen',idleAfter.clock>idleBefore.clock&&idleAfter.time===idleBefore.time,{idleBefore,idleAfter});
     const migration = await page.evaluate(() => ({ pearls: __jg2d.meta.pearls, upg: __jg2d.meta.upg,
@@ -70,6 +70,15 @@ async function runSmoke(args = []) {
     const mapped = await state(); await page.waitForTimeout(120);
     record('Tab map freezes world', (await state()).time === mapped.time && await page.locator('#map').count() === 1);
     await page.keyboard.press('Tab'); await waitScreen('PLAY');
+    await page.locator('.play-tools [data-action="map"]').click();await waitScreen('MAP');
+    record('on-screen map opens through the same pause path', await page.locator('#map').count() === 1);
+    await page.locator('.map-panel [data-action="resume"]').click();await waitScreen('PLAY');
+    await page.waitForFunction(()=>!__jg2d.game.blockHeld);
+    await page.mouse.move(640,360);await page.mouse.down({button:'right'});
+    await page.waitForFunction(()=>__jg2d.game.song.active);
+    await page.mouse.up({button:'right'});
+    await page.waitForFunction(()=>!__jg2d.game.song.active);
+    record('right mouse button starts and releases whale song', true);
     await page.keyboard.press('m');
     record('M toggles saved mute setting', (await state()).muted && (await state()).audioMuted);
     await page.keyboard.press('Escape'); await waitScreen('PAUSE');
@@ -96,6 +105,12 @@ async function runSmoke(args = []) {
     record('Escape skips descent to last section', skip >= 3, skip);
     await page.evaluate(() => __jg2d.step(310));
     record('descent reaches deep', (await state()).state === 'DEEP');
+    await page.waitForFunction(()=>!__jg2d.game.blockHeld);
+    const biteBefore=await page.evaluate(()=>__jg2d.game.player.biteId);
+    await page.mouse.move(640,360);await page.mouse.down({button:'left'});
+    await page.waitForFunction(id=>__jg2d.game.player.biteId>id,biteBefore);
+    await page.mouse.up({button:'left'});
+    record('left mouse button initiates a deep-dream lunge', true);
     await harness.shot('04-deep'); await readonly('deep');
     const levels = [1, 2, 3, 4, 5];
     const rendered = [];
@@ -127,6 +142,20 @@ async function runSmoke(args = []) {
     const final = await state();
     await page.reload(); await page.waitForFunction(() => __jg2d.ready);
     record('receipt pearls survive reload', (await state()).pearls === final.pearls, { before: final.pearls, after: (await state()).pearls });
+    for(const outcome of ['RESCUED','FADED','DEVOURED']){
+      await page.evaluate(outcome=>{
+        const {game}=__jg2d;
+        game.start('bay');game.begin();
+        if(outcome!=='RESCUED')game.transition('DEEP');
+        if(outcome==='DEVOURED')game.enterBoss();
+        game.finish(outcome);
+      },outcome);
+      await waitScreen('ENDING');
+      record(outcome+' plays its own failure scene',await page.evaluate(outcome=>__jg2d.renderer.cinema.failure===outcome,outcome));
+      await harness.shot('ending-'+outcome.toLowerCase());
+      await page.keyboard.press('Escape');await waitScreen('DAWN');
+    }
+    fixtures.push('Forced the three outcomes to validate the individual scene and DAWN transition.');
     record('no browser page exceptions', harness.pageErrors.length === 0, harness.pageErrors);
     record('no console errors', harness.consoleErrors.length === 0, harness.consoleErrors);
     record('no failed resources, including favicon', harness.failures.length === 0, harness.failures);

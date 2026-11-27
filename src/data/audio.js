@@ -34,6 +34,24 @@ export const BABBLE = Object.freeze({
 });
 
 export const BOSS_PITCH = Object.freeze({ grok: 1.18, qwen: 1.5, gemini: 1.8, zhipu: .84, claude: 1.05 });
+// Each windup has a short, repeatable rhythmic signature, in the current mode.
+export const BOSS_TELLS = Object.freeze({
+  grok: { hunt: { notes: [-5, 0, 4], wave: 'square' }, rings: { notes: [0, 4, 0], wave: 'square' },
+    fan: { notes: [0, 1, 2], wave: 'square' }, hide: { notes: [-5, -3], wave: 'sine' },
+    finale: { notes: [4, 2, 0, -3], wave: 'square' } },
+  qwen: { fan: { notes: [5, 7, 9], wave: 'triangle' }, return: { notes: [5, 9, 5], wave: 'triangle' },
+    rings: { notes: [9, 7, 5], wave: 'triangle' }, rule: { notes: [5, 5, 0], wave: 'triangle' },
+    finale: { notes: [9, 5, 7, 4], wave: 'triangle' } },
+  gemini: { hide: { notes: [5, 0], wave: 'sine' }, mark: { notes: [7, 5, 7], wave: 'sine' },
+    sweep: { notes: [0, 4, 7], wave: 'sine' }, yarn: { notes: [2, 5, 2, 5], wave: 'sine' },
+    finale: { notes: [9, 7, 4, 0], wave: 'sine' } },
+  zhipu: { stones: { notes: [-3, -5], wave: 'triangle' }, rings: { notes: [-5, 0, -5], wave: 'triangle' },
+    track: { notes: [-5, -3, -1], wave: 'triangle' }, ko: { notes: [-1, -3, -5, -3], wave: 'triangle' },
+    finale: { notes: [-5, -5, 0, 2], wave: 'triangle' } },
+  claude: { rings: { notes: [0, 2, 4], wave: 'sine' }, weave: { notes: [4, 4, 0], wave: 'sine' },
+    rush: { notes: [-5, 0, 5], wave: 'sine' }, stars: { notes: [9, 7, 5, 2], wave: 'sine' },
+    dark: { notes: [0, -3, -5], wave: 'sine' } },
+});
 export const STEM_LEVELS = Object.freeze({ pad: .25, pulse: .75, tension: .7, deep: .7, boss: .85 });
 
 export function modeFor(level = 1) {

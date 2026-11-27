@@ -8,7 +8,10 @@ const inside = (entity, h, padding = entity.r ?? 0) => Math.abs(entity.x - h.x) 
 
 function flow(game, h, dt) {
   const p = game.player;
-  if (!inside(p, h)) return;
+  const entered = inside(p, h);
+  if (entered && !h.playerInside) game.emit('current.enter', { kind: h.kind, x: h.x, y: h.y });
+  h.playerInside = entered;
+  if (!entered) return;
   let x = h.forceX ?? 0, y = h.forceY ?? 0;
   if (h.kind === 'current' || h.kind === 'reverseCurrent') x ||= T.hazards.flow * (h.kind === 'reverseCurrent' ? -1 : 1);
   if (h.kind === 'upcurrent') y ||= -T.hazards.upflow;

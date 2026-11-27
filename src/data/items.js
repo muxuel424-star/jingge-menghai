@@ -1,12 +1,14 @@
+import { P, SEA } from './palette.js';
+
 export const ITEMS = {
-  lamp: { key: 'lamp', nameKey: 'item.lamp', duration: 8, lightRadius: 420, revealHidden: true, color: '#FFD9A0' },
-  shield: { key: 'shield', nameKey: 'item.shield', duration: null, charges: 2, breakInvulnerability: 0.85, color: '#EADFC4' },
-  magnet: { key: 'magnet', nameKey: 'item.magnet', duration: 18, radius: 192, edibleOnly: true, ignoresArmored: true, color: '#7FE8D8' },
-  bait: { key: 'bait', nameKey: 'item.bait', duration: 16, radius: 300, attracts: ['fry'], color: '#F2E7CF' },
-  haste: { key: 'haste', nameKey: 'item.haste', duration: 14, speedMul: 1.32, dashRegenMul: 1.5, singingSpeedMul: 0.73, color: '#A9D6F5' },
-  heal: { key: 'heal', nameKey: 'item.heal', duration: 0, healFraction: 0.35, stability: 12, instant: true, color: '#8FF0DC' },
-  smoke: { key: 'smoke', nameKey: 'item.smoke', duration: 6, loseTargets: true, stopNightmareChainChase: true, color: '#5B3A88' },
-  sonar: { key: 'sonar', nameKey: 'item.sonar', duration: 25, reveal: ['chest', 'fragment', 'instrument'], color: '#A9D6F5' },
+  lamp: { key: 'lamp', nameKey: 'item.lamp', duration: 8, lightRadius: 420, revealHidden: true, color: P.lamp },
+  shield: { key: 'shield', nameKey: 'item.shield', duration: null, charges: 2, breakInvulnerability: 0.85, color: P.bone },
+  magnet: { key: 'magnet', nameKey: 'item.magnet', duration: 18, radius: 192, edibleOnly: true, ignoresArmored: true, color: P.dream },
+  bait: { key: 'bait', nameKey: 'item.bait', duration: 16, radius: 300, attracts: ['fry'], color: P.paper },
+  haste: { key: 'haste', nameKey: 'item.haste', duration: 14, speedMul: 1.32, dashRegenMul: 1.5, singingSpeedMul: 0.73, color: SEA[1].hi },
+  heal: { key: 'heal', nameKey: 'item.heal', duration: 0, healFraction: 0.35, stability: 12, instant: true, color: SEA[0].hi },
+  smoke: { key: 'smoke', nameKey: 'item.smoke', duration: 6, loseTargets: true, stopNightmareChainChase: true, color: SEA[2].mid },
+  sonar: { key: 'sonar', nameKey: 'item.sonar', duration: 25, reveal: ['chest', 'fragment', 'instrument'], color: SEA[1].hi },
 };
 
 export const ITEM_RULES = { maxBuffs: 2, refreshSame: true, supplyPoints: [12, 16], forecastSeconds: 40, bossSupply: 'shield' };
@@ -36,4 +38,3 @@ export const MISSIONS = [
   { id: 'hidden', target: 1, pearls: 20, level: 1, stat: 'souvenir' },
   { id: 'win', target: 1, pearls: 80, level: 5, stat: 'win' },
 ];
-export default ITEMS;

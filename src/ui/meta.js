@@ -1,14 +1,17 @@
 import { UPGRADES, MISSIONS } from '../data/items.js';
 import { SAVE_KEY, LEGACY_KEY, RANKS, ACHIEVEMENTS, META_RULES } from '../data/meta.js';
+import { SPECIES_NOTES } from '../data/narrative.js';
 const int = (v, lo = 0, hi = Number.MAX_SAFE_INTEGER) => Math.min(hi, Math.max(lo, Math.floor(Number(v) || 0)));
 const unique = (a) => [...new Set(Array.isArray(a) ? a : [])];
+const melodyIds = l => unique(l?.melodyIds).filter(i=>[0,1,2].includes(i));
+const refreshUnlocks = d => { d.unlocks.awakening = Object.values(d.levels).every(l=>l.melodyIds.length===3); };
 export function freshSave() {
   return {
     v: 2, pearls: 0, upg: { belly: 0, fin: 0, fat: 0, echo: 0 },
-    levels: Object.fromEntries([1,2,3,4,5].map((n) => [n, { unlocked: n === 1, cleared: false, best: null, fragments: [0,0,0], melody: 0, melodyIds: [], runs: 0 }])),
+    levels: Object.fromEntries([1,2,3,4,5].map((n) => [n, { unlocked: n === 1, cleared: false, best: null, fragments: [0,0,0], melody: 0, melodyIds: [], runs: 0, failures: 0 }])),
     missions: { active: [], done: [], runComplete: [] }, codex: { species: [], fragments: [], hearts: [] },
     achievements: [], souvenirs: [], lastSeed: null, stats: { runs: 0, wins: 0, bestScore: 0, totalDreams: 0, totalEaten: 0, totalAbyss: 0 },
-    settings: { muted: false, shake: 1, quality: 'auto', contrast: false },
+    unlocks: { awakening: false }, settings: { muted: false, shake: 1, quality: 'auto', contrast: false, assistance: false },
   };
 }
 export function validateSave(raw) {
@@ -21,15 +24,21 @@ export function validateSave(raw) {
     const a = raw.levels?.[k];
     if (!a) continue;
     Object.assign(d.levels[k], { unlocked: k === '1' || !!a.unlocked, cleared: !!a.cleared, best: RANKS.includes(a.best) ? a.best : null,
-      fragments: [0,1,2].map((i) => a.fragments?.[i] ? 1 : 0), melody: int(a.melody, 0, 3), melodyIds: unique(a.melodyIds).filter(i=>[0,1,2].includes(i)), runs: int(a.runs) });
+      fragments: [0,1,2].map((i) => a.fragments?.[i] ? 1 : 0), melody: int(a.melody, 0, 3), melodyIds: melodyIds(a), runs: int(a.runs), failures: int(a.failures) });
+    if (d.levels[k].melody===3 && !d.levels[k].melodyIds.length) d.levels[k].melodyIds=[0,1,2];
+    d.levels[k].melody=Math.max(d.levels[k].melody,d.levels[k].melodyIds.length);
   }
   for (const k of Object.keys(d.stats)) d.stats[k] = int(raw.stats?.[k]);
-  for (const k of Object.keys(d.codex)) d.codex[k] = unique(raw.codex?.[k]);
-  d.souvenirs = unique(raw.souvenirs);
+  d.codex.species=unique(raw.codex?.species).filter(k=>Object.hasOwn(SPECIES_NOTES,k));
+  d.codex.fragments=unique(raw.codex?.fragments).filter(k=>/^[1-5]-[1-3]$/.test(k));
+  d.codex.hearts=unique(raw.codex?.hearts).filter(k=>[1,2,3,4,5].includes(k));
+  d.souvenirs = unique(raw.souvenirs).filter(k=>[1,2,3,4,5].includes(k));
   d.achievements = unique(raw.achievements).filter((id) => ACHIEVEMENTS.some((a) => a.id === id));
-  d.missions.done = unique(raw.missions?.done);
+  d.missions.done = unique(raw.missions?.done).filter(id=>MISSIONS.some(m=>m.id===id));
   d.missions.active = unique(raw.missions?.active).filter((id) => MISSIONS.some((m) => m.id === id)).slice(0, 3);
-  d.settings = { ...d.settings, ...raw.settings, muted: !!raw.settings?.muted, contrast: !!raw.settings?.contrast, shake: Math.min(1, Math.max(0, Number(raw.settings?.shake ?? 1))) };
+  d.settings = { ...d.settings, muted: !!raw.settings?.muted, contrast: !!raw.settings?.contrast, assistance: !!raw.settings?.assistance,
+    quality: ['auto','high','low'].includes(raw.settings?.quality)?raw.settings.quality:'auto', shake: Math.min(1, Math.max(0, Number.isFinite(+raw.settings?.shake)?+raw.settings.shake:1)) };
+  refreshUnlocks(d);
   return d;
 }
 export function migrate(storage) {
@@ -59,6 +68,7 @@ export class Meta {
   get upg() { return this.data.upg; }
   get settings() { return this.data.settings; }
   get levels() { return this.data.levels; }
+  get awakening() { return this.data.unlocks.awakening; }
   fillMissions() {
     const highest = Math.max(1, ...Object.entries(this.levels).filter(([,l]) => l.cleared).map(([k]) => +k));
     const pool = MISSIONS.filter((m) => m.level <= highest).sort((a,b) => Number(this.data.missions.done.includes(a.id)) - Number(this.data.missions.done.includes(b.id)));
@@ -89,6 +99,8 @@ export class Meta {
     r.rank = result.grade ?? result.rank;
     r.pearls = result.lootPearls ?? (result.wages === undefined ? result.pearls : 0);
     r.nightmaresSlept = result.stats?.nightmaresSlept ?? result.stats?.calmed ?? 0;
+    r.souvenir = Number(!!(result.souvenir || result.stats?.souvenir));
+    r.delivered = result.stats?.delivered ?? result.delivered ?? 0;
     r.species = (result.species || []).filter(k => ['fry','lantern','manta','royal','abyss','jelly','tapir','guard','nightmare'].includes(k));
     const n = int(result.level?.level ?? result.level ?? runStats.level, 1, 5);
     const l = this.levels[n], win = result.outcome === 'CLEARED' || result.win === true;
@@ -97,16 +109,18 @@ export class Meta {
     r.score ??= 0; r.rank ??= 'C';
     const wage = int(r.score / META_RULES.scorePerPearl, META_RULES.minWage, META_RULES.maxWage);
     const first = win && !l.cleared ? META_RULES.firstClear : 0;
-    const completed = MISSIONS.filter((m) => this.data.missions.active.includes(m.id) && (
+    const missionIds = Array.isArray(result.missionProgress) ? result.missionProgress.map(m=>m.id) : this.data.missions.active;
+    const completed = MISSIONS.filter((m) => missionIds.includes(m.id) && (m.id!=='win'||n===5) && (
       m.comparison === 'equal' ? win && r[m.stat] === m.target :
       m.comparison === 'less' ? win && r[m.stat] <= m.target : (r[m.stat] || 0) >= m.target
     ));
     const taskPay = completed.reduce((s,m) => s + m.pearls, 0);
     const pay = Math.floor((wage + (r.pearls || 0) + taskPay + first) * (win ? 1 : META_RULES.failurePay));
-    this.data.pearls += pay; l.runs++; l.cleared ||= win;
+    this.data.pearls += pay; l.runs++; l.cleared ||= win; l.failures=win?0:l.failures+1;
     this.data.lastSeed = result.seed ?? this.data.lastSeed;
-    l.melody = Math.max(l.melody, r.melodies);
-    l.melodyIds = unique([...(l.melodyIds || []), ...(Array.isArray(result.melodies) ? result.melodies : [])]);
+    l.melodyIds = melodyIds({melodyIds:[...l.melodyIds,...(Array.isArray(result.melodies)?result.melodies:[])]});
+    if (!Array.isArray(result.melodies) && r.melodies===3) l.melodyIds=[0,1,2];
+    l.melody = Math.max(l.melody, l.melodyIds.length); refreshUnlocks(this.data);
     const seen = r.fragmentIds || [];
     for (let i=0; i<3; i++) if (seen.includes(i) || seen.includes(n + '-' + (i+1)) || (r.fragments > i && !seen.length)) l.fragments[i] = 1;
     if (win && RANKS.indexOf(r.rank) > RANKS.indexOf(l.best)) l.best = r.rank;
@@ -126,4 +140,3 @@ export class Meta {
     this.settled.add(result); this.save(true); return result.receipt;
   }
 }
-

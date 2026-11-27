@@ -1,4 +1,5 @@
-import { BABBLE, BOSS_PITCH, MIX, modeFor, quantize } from '../data/audio.js';
+import { BABBLE, BOSS_PITCH, BOSS_TELLS, MIX, modeFor, quantize } from '../data/audio.js';
+import { WhaleSong } from './song.js';
 
 const N = (frequency, end, duration, volume, extra = {}) =>
   ({ wave: 'noise', duration, volume, filter: { frequency, end }, ...extra });
@@ -9,8 +10,7 @@ export class SoundEffects {
     this.engine = engine;
     this.last = new Map();
     this.pending = [];
-    this.songVoices = [];
-    this.walk = 0;
+    this.song = new WhaleSong(this);
     this.lineVoices = [];
   }
 
@@ -57,12 +57,13 @@ export class SoundEffects {
   }
 
   event(name, data = {}) {
+    if (name === 'fragment.collect') this.babble('player');
     const aliases = { 'item.pickup': 'item.pick', 'instrument.hit': 'instrument', 'hazard.vent': 'geyser',
       'jelly.bounce': 'boing', 'song.break': 'song.cancel', 'fish.attack': 'fish.release',
-      'fragment.collect': 'heal', 'melody.collect': 'heal', 'dream.collect': 'ui.pick' };
+      'fragment.collect': 'heal', 'melody.collect': 'heal', 'dream.collect': 'ui.pick', 'current.enter': 'whoosh' };
     name = aliases[name] ?? name;
-    if (name === 'song.start') return this.startSong(data);
-    if (name === 'song.beat') return this.songBeat(data);
+    if (name === 'song.start') return this.song.start(data);
+    if (name === 'song.beat') return this.song.beat(data);
     if (name === 'song.cancel') return this.stopSong();
     if (name === 'song.release') return this.releaseSong(data);
     if (name === 'song.resonate') return this.arpeggio(name, [0, 2, 4, 5, 7, 9, 10, 7, 5],
@@ -79,28 +80,32 @@ export class SoundEffects {
     if (name === 'dream.scatter') return this.arpeggio(name, [4, 2, 0], { ...data, volume: .04 });
     if (name === 'nightmare.calm') return this.arpeggio(name, [0, 2, 4, 5], { ...data, duration: .7, wet: .8, volume: .055 });
     if (name === 'shield.break') return this.play(name, .1, [T(9, .3, .08), N(4800, 900, .15, .05)], data);
-    if (name === 'boss.enter') return this.babble(data.key);
+    if (['boss.enter', 'boss.phase', 'boss.gate', 'boss.down'].includes(name)) {
+      this.babble(data.key, name === 'boss.phase' ? MIX.phaseSilence : name === 'boss.down' ? (data.lineAt ?? 3.2) : 0);
+    }
     if (name === 'item.pick') return this.pickup(data);
     if (name === 'fish.tell' || name.startsWith('fish.tell.')) return this.fish('tell', data.kind ?? name.split('.').pop(), data);
     if (name === 'fish.release' || name.startsWith('fish.release.')) return this.fish('release', data.kind ?? name.split('.').pop(), data);
     if (name === 'fish.crack') return this.play(name, .1, [N(4800, 950, .18, .12), T(7, .15, .04, { wave: 'square' })], data);
     if (name === 'boss.tell' || name.startsWith('boss.tell.')) return this.bossTell(data);
     if (name === 'boss.attack' || name.startsWith('boss.attack.')) return this.bossAttack(data);
-    if (name === 'boss.hurt') return this.play(name, .15,
-      [T(4, .22, .09, { wave: 'triangle', end: modeFor(this.engine.level).scale[0] }), N(4800, 950, .12, .08)], data, 2);
+    if (name === 'boss.hurt') return this.play(data.back ? 'boss.backhit' : name, .15,
+      [T(4, .22, .09, { wave: 'triangle', end: modeFor(this.engine.level).scale[0] }), N(4800, 950, .12, .08),
+        ...(data.back ? [T(9, .2, .055, { wet: .5 })] : [])], data, 2);
+    if (name === 'boss.stone') return this.play(name, .1, [N(950, 190, .11, .07), T(-3, .16, .045)], data, 3);
+    if (name === 'boss.yarn.bounce') return this.play(name, .1, [T(5, .15, .055, { wave: 'sine' }), N(650, 220, .08, .025)], data);
     if (name === 'boss.phase') return this.play(name, .5,
       [T(-5, 1.2, .18, { wave: 'sine', vibrato: 13, wet: .75, bus: 'music' })], data, 4);
     if (name === 'boss.down') return this.down(data);
     if (name === 'boss.gate') return this.arpeggio(name, [0, 1, 2, 3], { gap: .12, volume: .045, wet: .65 });
-    if (name === 'boss.gate.result' && data.key === 'claude' && data.phase === 3
-      && data.quality?.toLowerCase() === 'perfect') return this.choir();
+    if (name === 'awakening') return this.choir();
     if (name === 'env.warn' || name === 'env.fire') return this.environment(name, data);
     if (name === 'geyser') return this.play(name, .4, [N(380, 1800, 1.2, .095)], data);
     if (name === 'whoosh') return this.play(name, .6, [N(600, 1800, .5, .065)], data);
     if (name === 'boing') return this.play(name, .3,
       [T(0, .3, .09, { end: modeFor(this.engine.level).scale[4] }), T(5, .22, .035, { wave: 'triangle' })], data);
     if (name === 'instrument') return this.arpeggio(name, [0, 4, 7], { ...data, wet: .9, duration: 1.4, volume: .09 });
-    if (name === 'dialogue') return this.babble(data.key ?? data.speaker ?? 'player');
+    if (name === 'dialogue') return this.babble(data.speaker ?? data.key ?? 'player');
     if (name === 'dawn.bell') return this.arpeggio(name, [0, 4, 5], { gap: .45, duration: 2.2, volume: .09, wet: .9, bus: 'music' });
     if (name.startsWith('ui.')) {
       const notes = name === 'ui.seal' ? [0, 4, 5] : name === 'ui.confirm' ? [2, 4] : [4];
@@ -109,7 +114,15 @@ export class SoundEffects {
     if (name === 'state.change') {
       if (!['SURFACE', 'DEEP', 'BOSS'].includes(data.to)) this.stopSong();
       if (data.to === 'DAWN') this.event('dawn.bell');
+      if (data.to === 'DESCENT') this.play('descent', 1, [T(-5, 3, .065, { bus: 'music', wet: 1 }),
+        N(700, 220, 1.3, .035, { delay: 1.2, wet: .8 })]);
     }
+    if (name === 'counterkill') return this.play(name, .5, [T(-5, 1.5, .09, { wet: .8 }),
+      N(900, 160, .8, .065, { delay: .5 }), T(7, .4, .06, { delay: 1.3, wet: .8 })], data, 4);
+    if (name === 'frenzy') return this.arpeggio(name, [0, 2, 4, 5, 9], { volume: .055, wet: .5 });
+    if (name === 'shortcut') return this.play(name, .5, [N(600, 1600, .4, .045), T(5, .35, .045, { wet: .5 })], data);
+    if (name === 'run.finish' && data.outcome !== 'CLEARED') return this.arpeggio('failure', [2, 0, -3],
+      { gap: .4, duration: 1.2, volume: .06, wet: .8, bus: 'music' });
   }
 
   eat(kind = 'fry', combo = 0, data = {}) {
@@ -143,6 +156,10 @@ export class SoundEffects {
       royal: { note: 3, wave: 'square', wet: .12 },
       abyss: { note: -5, wave: 'sine', wet: .6 },
       nightmare: { note: -2, wave: 'triangle', wet: .7 },
+      guard: { note: -1, wave: 'square', wet: .12 },
+      tapir: { note: -4, wave: 'triangle', wet: .5 },
+      jelly: { note: 5, wave: 'sine', wet: .55 },
+      fry: { note: 4, wave: 'sine', wet: .1 },
     };
     const timbre = timbres[kind] ?? { note: 2, wave: 'sine', wet: .25 };
     const tell = action === 'tell';
@@ -156,9 +173,12 @@ export class SoundEffects {
     const pitch = BOSS_PITCH[data.key] ?? 1;
     const base = modeFor(this.engine.level).scale[0];
     const frequency = quantize(base * pitch, this.engine.level);
-    this.play(`boss.tell.${data.key}`, .18,
-      [{ frequency, wave: 'triangle', duration: Math.min(1.5, data.windup ?? data.duration ?? .7),
-        volume: .085, wet: .55, vibrato: 6 }, N(800, 1400, .32, .025)], data, 3);
+    const score = BOSS_TELLS[data.key]?.[data.skill] ?? { notes: [0, 2], wave: 'triangle' };
+    const duration = Math.min(1.5, data.windup ?? data.duration ?? .7);
+    this.play(`boss.tell.${data.key}.${data.skill}`, .18,
+      [{ frequency, wave: score.wave, duration, volume: .055, wet: .55, vibrato: 6 },
+        ...score.notes.map((note, index) => T(note, Math.min(.2, duration / score.notes.length), .042,
+          { wave: score.wave, delay: index * duration / score.notes.length, wet: .35 }))], data, 3);
   }
 
   bossAttack(data) {
@@ -181,42 +201,15 @@ export class SoundEffects {
   environment(name, data) {
     const kind = data.kind ?? data.type ?? 'rock';
     const warn = name === 'env.warn';
-    const thermal = /heat|lava|vent|fire|geyser/.test(kind), light = /light|beam|laser|mirror/.test(kind);
+    const thermal = /thermal|steam|eruption|heat|lava|vent|fire|geyser/i.test(kind);
+    const light = /light|beam|laser|mirror|echoRing/i.test(kind);
     const layers = light ? [T(warn ? 5 : 9, warn ? .4 : .55, .07, { wet: .7 })]
       : thermal ? [T(-5, warn ? .45 : .6, .085), N(700, warn ? 1200 : 220, .35, warn ? .025 : .11)]
       : [N(warn ? 1000 : 1700, 240, warn ? .35 : .25, warn ? .045 : .1), T(-2, .22, warn ? .025 : .05, { wave: 'triangle' })];
     this.play(`${name}.${kind}`, warn ? .4 : .25, layers, data);
   }
 
-  startSong(data) {
-    this.stopSong();
-    const audio = this.engine, scale = modeFor(audio.level).scale;
-    this.walk = (this.walk + 2) % 5;
-    const frequency = data.response ? modeFor(audio.level).melody[0] : scale[this.walk];
-    this.songVoices = [1, .5].map((ratio, i) => audio.tone({ frequency: frequency * ratio,
-      duration: 8, volume: i ? .035 : .08, wave: i ? 'sine' : 'triangle',
-      attack: .15, wet: .8, bus: 'music', vibrato: 10, priority: 4, sustain: true })).filter(Boolean);
-  }
-
-  songBeat(data) {
-    const audio = this.engine, mode = modeFor(audio.level), now = audio.ctx.currentTime;
-    const beat = (data.beat ?? 0) % 4;
-    if (!data.response && beat !== 0) this.walk = (this.walk + (beat % 2 ? 1 : 4)) % 5;
-    const candidates = data.response ? mode.beats.map((offset, index) => ({ offset, index }))
-      .filter(item => Math.floor(item.offset) === beat) : [{ offset: beat, index: this.walk }];
-    for (const item of candidates) {
-      const frequency = data.response ? mode.melody[item.index] : mode.scale[item.index];
-      const when = now + (item.offset - beat) * (60 / (data.bpm ?? 72));
-      for (let index = 0; index < this.songVoices.length; index++) {
-        const source = this.songVoices[index].source;
-        source.frequency.cancelScheduledValues(when);
-        source.frequency.linearRampToValueAtTime(frequency * (index ? .5 : 1), when + .06);
-      }
-    }
-    this.play('song.tick', .12, [N(1800, 900, .04, beat === 3 ? .025 : .014, { wet: .1 })], data, 2);
-  }
-
-  stopSong() { for (const voice of this.songVoices) voice.stop(); this.songVoices = []; }
+  stopSong() { this.song.stop(); }
 
   releaseSong(data) {
     this.stopSong();
@@ -251,7 +244,7 @@ export class SoundEffects {
       T(0, 1.3, .07, { delay: 3.2, wet: .8, bus: 'music' }), T(2, 1.3, .07, { delay: 3.7, wet: .8, bus: 'music' })], data, 4);
   }
 
-  babble(key) {
+  babble(key, delay = 0) {
     const voice = BABBLE[key] ?? BABBLE.player;
     for (const lineVoice of this.lineVoices) lineVoice.gain.gain.setTargetAtTime(.003, this.engine.ctx.currentTime, .025);
     for (const item of this.pending) if (item.babble) item.volume *= .3;
@@ -260,7 +253,7 @@ export class SoundEffects {
     this.play(`babble.${key}`, .3, Array.from({ length: voice.count }, (_, index) => ({
       frequency: quantize(base * [1, 1.25, 1, 1.5][index % 4], this.engine.level),
       wave: voice.wave, duration: .08, volume: voice.wave === 'square' ? .018 : .035,
-      delay: index * voice.gap, bus: 'voice', wet: .06,
+      delay: delay + index * voice.gap, bus: 'voice', wet: .06,
     })), {}, 2);
   }
 }

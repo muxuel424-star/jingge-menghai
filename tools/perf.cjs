@@ -2,11 +2,27 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const crypto = require('node:crypto');
+const { execFile } = require('node:child_process');
+const { promisify } = require('node:util');
 const { performance } = require('node:perf_hooks');
 const { openBrowser } = require('./browser.cjs');
 
 const LEVEL_KEYS = ['bay', 'porcelain', 'violet', 'magma', 'sanctuary'];
 const LIMITS = { fps: 45, simMs: 3, drawMs: 12, drawImages: 260, readyMs: 3000, memoryMB: 220 };
+const execute = promisify(execFile);
+async function processMemory(browserCDP){
+  if(process.platform!=='win32')return null;
+  const {processInfo}=await browserCDP.send('SystemInfo.getProcessInfo');
+  const active=processInfo.filter(p=>['renderer','GPU'].includes(p.type));
+  if(!active.length)return null;
+  const ids=active.map(p=>Number(p.id)).filter(Number.isSafeInteger);
+  const command='Get-Process -ErrorAction SilentlyContinue -Id '+ids.join(',')+
+    ' | Select-Object Id,PrivateMemorySize64,WorkingSet64 | ConvertTo-Json -Compress';
+  const {stdout}=await execute('powershell.exe',['-NoProfile','-NonInteractive','-Command',command],{windowsHide:true});
+  const values=JSON.parse(stdout||'[]');
+  return [values].flat().map(p=>({type:active.find(x=>x.id===p.Id)?.type,
+    privateMiB:p.PrivateMemorySize64/1048576,workingSetMiB:p.WorkingSet64/1048576}));
+}
 
 function argument(args, key, fallback) {
   const index = args.indexOf(key);
@@ -46,9 +62,10 @@ async function runPerf(args = process.argv.slice(2)) {
   const seconds = Number(argument(args, '--seconds', '60'));
   if (!Number.isFinite(seconds) || seconds < 5 || seconds > 600) throw new Error('--seconds must be between 5 and 600.');
   const out = argument(args, '--out', path.join(os.tmpdir(), 'jingge-perf-check'));
+  const hardware=args.includes('--hardware');
   const check = await openBrowser({ preview: args.includes('--preview') || args.includes('--preview=v2'), out,
-    viewport: { width: 1920, height: 1080 } });
-  let cdp;
+    viewport: { width: 1920, height: 1080 }, hardware });
+  let cdp,browserCDP;
   try {
     const bundle = fs.readFileSync(path.resolve(__dirname,'..',check.entry));
     const started = performance.now(); await check.load(); const readyMs = performance.now() - started;
@@ -56,6 +73,9 @@ async function runPerf(args = process.argv.slice(2)) {
     await check.page.locator('[data-action="orders"]').click();
     cdp = await check.context.newCDPSession(check.page);
     const browserVersion = await cdp.send('Browser.getVersion');
+    let graphics=null;
+    const processes=[];
+    if(hardware){browserCDP=await check.browser.newBrowserCDPSession();graphics=(await browserCDP.send('SystemInfo.getInfo')).gpu;}
     const heap = [], scenarios = [];
     await check.page.evaluate(capacity => {
       const store = window.__jgPerf = { scene: 0, n: 0, stopped: false, previous: 0,
@@ -93,6 +113,7 @@ async function runPerf(args = process.argv.slice(2)) {
             backingStorageMB: usage.backingStorageSize === undefined ? null : usage.backingStorageSize / 1048576 });
         }
         console.log('sampled ' + scenarios[index].name);
+        if(hardware)processes.push({scene:index,processes:await processMemory(browserCDP)});
       }
     }
     await check.page.keyboard.up('d'); await check.page.keyboard.up('j'); await check.page.keyboard.up('f');
@@ -123,7 +144,7 @@ async function runPerf(args = process.argv.slice(2)) {
     const errors = { page: check.pageErrors, console: check.consoleErrors, requests: check.failures };
     const report = { kind:'headless-browser-performance-sample', requestedSeconds:seconds, readyMs, limits:LIMITS,
       bundle:{entry:check.entry,bytes:bundle.length,sha256:crypto.createHash('sha256').update(bundle).digest('hex')},
-      browser:browserVersion, viewport:{width:1920,height:1080,deviceScaleFactor:1},
+      browser:browserVersion, graphics, processes, viewport:{width:1920,height:1080,deviceScaleFactor:1},
       fixture:'Five authored deep layers and phase-three boss arenas, largest player body, invulnerable only for uninterrupted profiling. Ordinary game simulation/render/audio remain running. These fixtures do not validate normal progression.',
       measurementLimits:['Headless Chrome on this host is not a physical integrated-GPU acceptance test.',
         'CDP JavaScript heap excludes some canvas, decoded image, audio and GPU memory; it cannot establish the 220MB total-memory budget.',
@@ -141,7 +162,7 @@ async function runPerf(args = process.argv.slice(2)) {
       jsHeapMaxMB:maxHeap,checks:report.checks},null,2));
     if (Object.values(report.checks).some(value => value===false)) process.exitCode=1;
     return report;
-  } finally { try { await cdp?.detach(); } finally { await check.close(); } }
+  } finally { try { await cdp?.detach();await browserCDP?.detach(); } finally { await check.close(); } }
 }
 
 module.exports = { runPerf };

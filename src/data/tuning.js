@@ -1,7 +1,7 @@
 // 02 is authoritative; the other design tables extend these values.
 export const TUNING = {
   sim: { step: 1 / 60, maxDt: .25, maxSteps: 5, epsilon: 1e-9, activeRadius: 1450, visibleEnemies: 28, skillSlots: 2 },
-  run: { surfaceMax: 360, deepMax: 420, riftFallback: 360, bossFallback: 420, descent: 8, descentSkip: 3, defeat: 4 },
+  run: { briefMax: 30, surfaceMax: 360, deepMax: 420, riftFallback: 360, bossFallback: 420, descent: 8, descentSkip: 3, defeat: 4 },
   player: {
     radius: 23, accel: 9, dashSpeed: 355, swimSpeed: 195, singSpeedMul: .55,
     breathMax: 100, breathRegen: 9, breathDrain: 16, breathBonusPer: [10, 8, 32],
@@ -29,6 +29,12 @@ export const TUNING = {
     { nightmares: 5, nightmareSpeed: 1.15, hazardTell: .7, stability: 1.25, fishCd: .8 },
   ],
   fish: { idleSpeed: 42, frySpeed: 68, fryFleeMul: .63, fleeRadius: 125, respawn: 10, refillRadius: 720, lureSpeed: 135, stunPerfect: 2.2, stunGood: 1.1, backOffset: -10, retargetGrace: 1.1, skillRetry: .5, mantaPull: 90, mantaCd: 4, royalCd: 2, abyssCd: 3, abyssPull: 165, abyssPreyPull: 160, homeRange: 500 },
+  ecology: { maxEvents: 2, corpseDuration: 3, corpseCount: [2, 3], corpseRadius: 420, lanternLureDuration: 1.1, corpseSpeed: 90 },
+  supply: { revealRadius: 720, baseWeight: 1, needWeight: 10, growthWeight: 7, dangerWeight: 4, reserveStability: 30, hpThreshold: .65, repeatMul: .2 },
+  assistance: { requiredFailures: 2, pressureReduction: 1 },
+  collection: { completeFragments: 3, memBonus: .1 },
+  terrain: { fragileHits: 2, fragileWidth: 48, fragileHeight: 60, pathBodyWidths: 2.5 },
+  awakening: { requiredDreams: 5, fragmentsPerDream: 3, duration: 14 },
   nightmare: { speed: 98, calmRate: .68, maxSize: 1.9, range: 620, release: [2, 6] },
   song: { bpm: 72, beats: 4, perfect: .08, responsePerfect: .11, good: .16, maxPhrases: 2.2, radius: 220, stun: 1.5, cooldown: 6, echoCooldown: .8, echoRadius: .08, resonanceDuration: 8, resonanceRadius: 1.4, perfectStun: 1.4, perfectRadius: 1.3, perfectCooldown: .6, perfectMem: 8, missStun: .6, missRadius: .85, missBreath: 10 },
   world: { pickupRadius: 52, instrumentReach: 70, fragmentRadius: 60, hintRadius: 220, hintDuration: 4, safeMargin: 3, projectionPasses: 8, chunkSize: 800, escapeRadii: [8,18,36,64,100,150,220,330,480,700,1000,1400,2000] },
@@ -40,8 +46,8 @@ export const TUNING = {
     defaultTell: .85, defaultRecovery: 1.8, defaultSpeed: 280, arenaRange: 520, fallbackFoodColumns: 11, fallbackFoodGap: 22, fallbackFoodOffset: 50,
   },
   bossAttack: { minTell: .32, phase3TellReduction: .07, phase3RecoveryReduction: .16, waveInterval: .42, waveTail: .4, fanSpread: .28, defaultCount: 5, defaultWaves: 3, defaultDuration: 1.4, ambushOffset: 220, ambushHidden: 1.6, markerRadius: 48, markerTell: .7, markerLife: 1.2, markerSpread: 50, markerAngle: 2.4, yarnCount: 6, yarnSpacing: 100, yarnLife: 6, yarnStun: 2.5, dashDuration: .62, dashSpeed: 650, sweepUpperMargin: 50, sweepDuration: .5, safeRadius: 65, rainDuration: 1.5, halfRainDuration: 4, darknessDuration: 6, lampRadius: 260, boomerangReturn: 1.06, trackingAcceleration: 80, recoveryMin: .5, instrumentWindow: 8 },
+  bossPatterns: { damageInterval: 1, yarnRadius: 18, yarnSpeed: 275, yarnLifetime: 30, yarnLineLife: 8, koCover: .7, koInterval: .5, koImpactLife: .25, starColumns: 25, starMargin: 1.2, darknessSway: 100, darknessSpeed: .8, lampHalfAngle: 1, darknessShotInterval: 1.5 },
   economy: { wageDivisor: 400, wageMin: 5, wageMax: 25, failMul: .3, firstClear: 30, chest: 5, clam: 1, clamBonusChance: .14, clamBonus: 3, abyss: 10, pointsPerMem: 40 },
   upgrade: { belly: .08, fin: .04, fat: .1, echo: .08, max: 5 },
   grade: { collectionPerFragment: 10, shortcut: 5, souvenir: 10, target: 780, speedFull: .8, speedStep: .1, speedPenalty: 5, speedMax: 30, hurtMax: 20, hurtPenalty: 4, S: 85, A: 70, B: 50 },
 };
-export default TUNING;

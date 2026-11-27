@@ -2,7 +2,6 @@ import { defineLevel, ellipse as e, polygon as p, hazard as h } from './shared.j
 
 export const LEVEL_04 = defineLevel({
   key: 'magma', level: 4, boss: 'zhipu', width: 7800, wellX: 1000,
-  palette: { base: '#2A1417', mid: '#6E3229', hi: '#FFB27A', soul: '#FFE9A8' },
   surfaceRanges: [0, 1200, 2800, 4400, 5600, 7000, 7800],
   routeY: [700, 900, 740, 800, 800, 900], deepY: [800, 780, 850],
   nightmares: [0, 3, 3, 0, 4, 2], teach: ['vent', 'current', 'steam', 'fragment', 'chain', 'rift'],
@@ -42,4 +41,3 @@ export const LEVEL_04 = defineLevel({
   souvenir: 'workBadge', souvenirPoint: [5200, 1500],
   loop: { fromX: 350, toX: 2700, maxLoops: 2, breakWhenStill: 3, clockHandsStatic: true, hintAfter: 2, hintKey: 'ui.loop' },
 });
-export default LEVEL_04;

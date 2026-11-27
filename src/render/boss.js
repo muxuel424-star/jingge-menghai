@@ -1,11 +1,13 @@
 import { P } from './palette.js';
 import { ellipse,poly,instrument } from './sprites.js';
 import { cell } from './animation.js';
+import { defeat } from './boss-defeat.js';
 const TAU=Math.PI*2;
 export class BossRenderer {
- constructor(atlas){this.cells=[0,1,2,3,4].map(i=>cell(atlas,i,3,2));}
+ constructor(atlas,rest){this.cells=[0,1,2,3,4].map(i=>cell(atlas,i,3,2));this.rest=[0,1,2,3,4].map(i=>cell(rest,i,3,2));}
  draw(c,g,time){
   const b=g.boss;if(!b)return;const pal=g.level.palette,a=b.attack;
+  if(b.down)return;
   for(const s of g.scene.safePoints||[]){ellipse(c,s.x,s.y,30,12,pal.base);c.strokeStyle=P.bone;c.lineWidth=2;c.beginPath();c.moveTo(s.x-9,s.y);c.lineTo(s.x+9,s.y);c.moveTo(s.x,s.y-9);c.lineTo(s.x,s.y+9);c.stroke();}
   for(const i of g.entities.instruments)instrument(c,i,pal,time);
   if(a&&b.tell>0){
@@ -32,8 +34,10 @@ export class BossRenderer {
   for(const p of b.areas){
    c.save();c.strokeStyle=p.tellT>0?P.fear:pal.hi;c.lineWidth=3;
    if(p.kind==='yarn'){c.beginPath();c.moveTo(p.x,p.y);c.lineTo(p.x2,p.y2);c.stroke();}
+   else if(p.kind==='ko'){c.fillStyle=P.fear;c.globalAlpha=p.tellT>0?.12:.3;c.fillRect(p.x,p.y,p.w,p.h);c.globalAlpha=.8;c.setLineDash([7,5]);c.strokeRect(p.x,p.y,p.w,p.h);}
    else{c.globalAlpha=.17;ellipse(c,p.x,p.y,p.r,p.r,P.fear);c.globalAlpha=1;c.setLineDash([7,5]);c.beginPath();c.arc(p.x,p.y,p.r,0,TAU);c.stroke();}c.restore();
   }
+  if(b.safeCell&&a?.skill.pattern==='doubleMarkers'){c.save();c.strokeStyle=P.bone;c.lineWidth=4;c.strokeRect(b.safeCell.x,b.safeCell.y,b.safeCell.w,b.safeCell.h);c.restore();}
   const image=this.cells[g.level.level-1],h=b.down?225:310,w=h*image.width/image.height;
   c.save();c.translate(b.x,b.y+Math.sin(time*2)*5+(b.down?(4-b.defeatTimer)*12:0));
   if(b.hidden>0)c.globalAlpha=.12;else if(b.invuln>0)c.globalAlpha=.7;
@@ -48,11 +52,15 @@ export class BossRenderer {
   for(const p of b.bullets){
    if(p.kind==='ring'){
     c.strokeStyle=pal.hi;c.lineWidth=4;c.beginPath();const gap=p.gap||0,gw=p.gapWidth||.8;c.arc(p.x,p.y,p.radius||p.r,gap+gw,gap+TAU-gw);c.stroke();
+   }else if(p.kind==='yarnBall'){
+    ellipse(c,p.x,p.y,p.r,p.r,pal.mid,P.ink,2);c.strokeStyle=P.bone;c.lineWidth=1.5;for(let i=0;i<3;i++){c.beginPath();c.ellipse(p.x,p.y,p.r*.8,p.r*.25,(time+i)*1.2,0,TAU);c.stroke();}
+   }else if(p.kind==='star'){
+    c.save();c.translate(p.x,p.y);c.rotate(time*.5);c.beginPath();for(let i=0;i<10;i++){const a=i/10*TAU,r=i%2?p.r*.45:p.r;i?c.lineTo(Math.cos(a)*r,Math.sin(a)*r):c.moveTo(Math.cos(a)*r,Math.sin(a)*r);}c.closePath();c.fillStyle=P.lamp;c.fill();c.strokeStyle=P.ink;c.lineWidth=1.5;c.stroke();c.restore();
    }else{
     c.save();c.translate(p.x,p.y);c.rotate(Math.atan2(p.vy,p.vx)+time);
     poly(c,[[0,-p.r],[p.r,0],[0,p.r],[-p.r,0]],pal.hi);c.restore();
    }
   }
  }
+ ending(c,g,x,y,heroX,heroY){const i=g.level.level-1;defeat(c,g,this.cells[i],this.rest[i],x,y,heroX,heroY);}
 }
-

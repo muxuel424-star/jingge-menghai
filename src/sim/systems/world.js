@@ -6,8 +6,10 @@ import { createNightmare } from '../entities/nightmare.js';
 import { createHazard } from '../entities/hazard.js';
 import { distance } from '../math.js';
 export function setupWorld(game, scene) {
-  game.scene = scene; game.terrain = new Terrain(scene);
-  game.entities = { fish: [], nightmares: [], hazards: [], pickups: [], fragments: [], melodies: [], dreamChain: [], instruments: [] };
+  game.scene = scene;
+  game.entities = { fish: [], nightmares: [], hazards: [], pickups: [], fragments: [], melodies: [], dreamChain: [], instruments: [], remains: [], breakables: (scene.breakables ?? []).map(s => ({ ...s, broken: false })) };
+  game.terrain = new Terrain({ ...scene, breakables: game.entities.breakables });
+  game.ecologyEvents = []; game.lastSupplyKey = null;
   for (const group of scene.spawns ?? []) {
     if (group.kind === 'nightmare') continue;
     for (let n = 0; n < group.count; n++) {
@@ -18,6 +20,7 @@ export function setupWorld(game, scene) {
         game.entities.pickups.push({ id: game.nextId++, key: group.kind, ...point, collected: false });
       } else {
         const fish = createFish(group.kind, x, y, game.nextId++, game.rng);
+        fish.school = `${group.kind}:${group.x}:${group.y}`;
         game.terrain.resolve(fish, fish.r, 2); fish.homeX = fish.x; fish.homeY = fish.y;
         game.entities.fish.push(fish);
       }
@@ -38,6 +41,15 @@ export function setupWorld(game, scene) {
   game.entities.melodies = (scene.melodies ?? []).map(f => ({ ...f, collected: game.melodies.has(f.id) }));
   game.entities.instruments = (scene.instruments ?? []).map(i => ({ ...i, id: game.nextId++, cd: 0 }));
   return game.entities;
+}
+export function tickBreakables(game) {
+  const p = game.player;
+  if (p.biteWindow <= 0) return;
+  for (const block of game.entities.breakables) {
+    if (block.broken || p.hitIds.has(block.id) || distance(p, block) > p.r + Math.max(block.rx, block.ry) + T.tiers[p.tier].reach + T.bite.reachBonus) continue;
+    p.hitIds.add(block.id); block.hp = Math.max(0, block.hp - 1); block.broken = !block.hp;
+    game.emit(block.broken ? 'terrain.break' : 'terrain.crack', { id: block.id, hp: block.hp, maxHp: block.maxHp, x: block.x, y: block.y });
+  }
 }
 export function respawnFish(game, dt) {
   for (const f of game.fish) {

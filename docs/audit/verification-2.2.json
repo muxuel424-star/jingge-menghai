@@ -1,0 +1,379 @@
+{
+  "version": "2.2.0",
+  "standalone": {
+    "bytes": 5261347,
+    "sha256": "e8b52f28e1858606b1af392d7e328e9ceb2b0b624011fdff547567c32806d23d",
+    "offlineNetworkRequests": 0
+  },
+  "unitTests": {
+    "passed": 141,
+    "failed": 0
+  },
+  "browserSmoke": {
+    "passed": 46,
+    "consoleErrors": 0,
+    "pageErrors": 0
+  },
+  "replay": [
+    {
+      "key": "bay",
+      "outcome": "CLEARED",
+      "story": 3,
+      "melody": 3,
+      "time": 75.38333333333034,
+      "frames": 5726,
+      "state": "DAWN",
+      "surface": 30.199999999999566,
+      "deep": 18.70000000000022,
+      "position": [
+        382.6617367682582,
+        441.39751432414624
+      ],
+      "conditions": {},
+      "tier": 2,
+      "mem": 1103.0999999999979,
+      "hp": 124,
+      "boss": {
+        "phase": 3,
+        "hp": 0,
+        "gates": 3
+      },
+      "hash": "4ee000dc51df27e18f3eb40c03042a8f416874c4a397e3e3e0657a1766a50e8b"
+    },
+    {
+      "key": "porcelain",
+      "outcome": "CLEARED",
+      "story": 3,
+      "melody": 3,
+      "time": 86.1999999999964,
+      "frames": 6403,
+      "state": "DAWN",
+      "surface": 36.66666666666587,
+      "deep": 20.516666666666783,
+      "position": [
+        732.4828115527131,
+        306.3018519827449
+      ],
+      "conditions": {},
+      "tier": 2,
+      "mem": 1195.4999999999973,
+      "hp": 179,
+      "boss": {
+        "phase": 3,
+        "hp": 0,
+        "gates": 3
+      },
+      "hash": "358f3212b8392c286f03f0e1683071f638ec8e5060428df29bc5b69b67b27121"
+    },
+    {
+      "key": "violet",
+      "outcome": "CLEARED",
+      "story": 3,
+      "melody": 3,
+      "time": 107.76666666666183,
+      "frames": 7693,
+      "state": "DAWN",
+      "surface": 40.8333333333323,
+      "deep": 36.96666666666585,
+      "position": [
+        120.00881566676577,
+        323.64692653957206
+      ],
+      "conditions": {
+        "reverseCurrent": true
+      },
+      "tier": 2,
+      "mem": 1202.0999999999965,
+      "hp": 124,
+      "boss": {
+        "phase": 3,
+        "hp": 0,
+        "gates": 3
+      },
+      "hash": "2c06ced0a2dc36a02f7a018699b7637b126eb005d95db7ff1ef28bd4bee12f24"
+    },
+    {
+      "key": "magma",
+      "outcome": "CLEARED",
+      "story": 3,
+      "melody": 3,
+      "time": 82.99999999999658,
+      "frames": 6159,
+      "state": "DAWN",
+      "surface": 34.71666666666598,
+      "deep": 28.716666666666317,
+      "position": [
+        618.8664413955919,
+        352.5119469010312
+      ],
+      "conditions": {
+        "still3s": true
+      },
+      "tier": 2,
+      "mem": 1459.499999999993,
+      "hp": 182,
+      "boss": {
+        "phase": 3,
+        "hp": 0,
+        "gates": 3
+      },
+      "hash": "85db1ed0f258c19c0fc86017b05d5359812b8529b15d2421b2d9f288d80bd115"
+    },
+    {
+      "key": "sanctuary",
+      "outcome": "CLEARED",
+      "story": 3,
+      "melody": 3,
+      "time": 135.53333333333333,
+      "frames": 9315,
+      "state": "DAWN",
+      "surface": 43.08333333333217,
+      "deep": 69.29999999999735,
+      "position": [
+        378.0407631762703,
+        539.4317364785718
+      ],
+      "conditions": {
+        "reverseCurrent": true
+      },
+      "tier": 2,
+      "mem": 1393.4999999999932,
+      "hp": 192,
+      "boss": {
+        "phase": 3,
+        "hp": 0,
+        "gates": 3
+      },
+      "hash": "8fa8af4fdc932893067510414c5b557b34f46998b76119f76c222215d2f5ddc2"
+    }
+  ],
+  "browserReplay": [
+    {
+      "key": "bay",
+      "hash": "4ee000dc51df27e18f3eb40c03042a8f416874c4a397e3e3e0657a1766a50e8b",
+      "states": [
+        "SURFACE",
+        "DESCENT",
+        "DEEP",
+        "BOSS",
+        "DAWN"
+      ],
+      "gateResults": [
+        "Perfect",
+        "Perfect",
+        "Miss",
+        "Perfect"
+      ],
+      "choir": false
+    },
+    {
+      "key": "porcelain",
+      "hash": "358f3212b8392c286f03f0e1683071f638ec8e5060428df29bc5b69b67b27121",
+      "states": [
+        "SURFACE",
+        "DESCENT",
+        "DEEP",
+        "BOSS",
+        "DAWN"
+      ],
+      "gateResults": [
+        "Perfect",
+        "Perfect",
+        "Miss",
+        "Perfect"
+      ],
+      "choir": false
+    },
+    {
+      "key": "violet",
+      "hash": "2c06ced0a2dc36a02f7a018699b7637b126eb005d95db7ff1ef28bd4bee12f24",
+      "states": [
+        "SURFACE",
+        "DESCENT",
+        "DEEP",
+        "BOSS",
+        "DAWN"
+      ],
+      "gateResults": [
+        "Perfect",
+        "Perfect",
+        "Miss",
+        "Perfect"
+      ],
+      "choir": false
+    },
+    {
+      "key": "magma",
+      "hash": "85db1ed0f258c19c0fc86017b05d5359812b8529b15d2421b2d9f288d80bd115",
+      "states": [
+        "SURFACE",
+        "DESCENT",
+        "DEEP",
+        "BOSS",
+        "DAWN"
+      ],
+      "gateResults": [
+        "Perfect",
+        "Perfect",
+        "Perfect"
+      ],
+      "choir": false
+    },
+    {
+      "key": "sanctuary",
+      "hash": "8fa8af4fdc932893067510414c5b557b34f46998b76119f76c222215d2f5ddc2",
+      "states": [
+        "SURFACE",
+        "DESCENT",
+        "DEEP",
+        "BOSS",
+        "DAWN"
+      ],
+      "gateResults": [
+        "Perfect",
+        "Perfect",
+        "Perfect"
+      ],
+      "choir": true
+    }
+  ],
+  "visual": {
+    "tolerance": 0.02,
+    "pixelChannelAllowance": 8,
+    "results": [
+      {
+        "name": "bay-deep.webp",
+        "ratio": 0.004593098958333333,
+        "size": [
+          1280,
+          720
+        ],
+        "pass": true
+      },
+      {
+        "name": "bay-boss.webp",
+        "ratio": 0.0011360677083333333,
+        "size": [
+          1280,
+          720
+        ],
+        "pass": true
+      },
+      {
+        "name": "porcelain-deep.webp",
+        "ratio": 0.008018663194444444,
+        "size": [
+          1280,
+          720
+        ],
+        "pass": true
+      },
+      {
+        "name": "porcelain-boss.webp",
+        "ratio": 0.000546875,
+        "size": [
+          1280,
+          720
+        ],
+        "pass": true
+      },
+      {
+        "name": "violet-deep.webp",
+        "ratio": 0.0017144097222222222,
+        "size": [
+          1280,
+          720
+        ],
+        "pass": true
+      },
+      {
+        "name": "violet-boss.webp",
+        "ratio": 0.000615234375,
+        "size": [
+          1280,
+          720
+        ],
+        "pass": true
+      },
+      {
+        "name": "magma-deep.webp",
+        "ratio": 0.004679904513888889,
+        "size": [
+          1280,
+          720
+        ],
+        "pass": true
+      },
+      {
+        "name": "magma-boss.webp",
+        "ratio": 0.0012315538194444444,
+        "size": [
+          1280,
+          720
+        ],
+        "pass": true
+      },
+      {
+        "name": "sanctuary-deep.webp",
+        "ratio": 0.0009364149305555556,
+        "size": [
+          1280,
+          720
+        ],
+        "pass": true
+      },
+      {
+        "name": "sanctuary-boss.webp",
+        "ratio": 0.0011675347222222222,
+        "size": [
+          1280,
+          720
+        ],
+        "pass": true
+      }
+    ]
+  },
+  "voice": {
+    "seconds": 60,
+    "events": 91,
+    "peak": 0.18870587646961212,
+    "clipped": 0,
+    "maxVoices": 18,
+    "maxNew": 7,
+    "nodeAccounting": true,
+    "vacuumVerified": true,
+    "muteSurvivedResume": true
+  },
+  "hardware": {
+    "mode": "Headless Chrome with Windows hardware accelerated Canvas2D, author-created load scenes",
+    "renderer": "ANGLE (AMD, AMD Radeon (TM) Graphics (0x000015E7) Direct3D11 vs_5_0 ps_5_0, D3D11-31.0.21925.1001)",
+    "canvasAcceleration": "enabled",
+    "sampleSeconds": 60,
+    "readyMs": 935.1172999999999,
+    "fps": 56.21519931989846,
+    "slowFrames": 8,
+    "simP95Ms": 1.2000000476837158,
+    "drawP95Ms": 1.899999976158142,
+    "maxMainRendererWorkingSetMiB": 242.37109375,
+    "maxMainRendererPrivateMiB": 161.41015625,
+    "maxGpuProcessPrivateMiB": 687.2265625,
+    "jsHeapMaxMiB": 8.10909652709961,
+    "caveat": "Main renderer approximated by the largest renderer process. GPU process is browser-wide. Peak process samples are not a per-tab Chrome Task Manager measurement or a GC trace."
+  },
+  "architecture": {
+    "checkedFiles": 72,
+    "strictPass": false,
+    "counts": {
+      "bare-number": 3305,
+      "hot-path-allocation-site": 94,
+      "render-possible-alias-write": 10
+    }
+  },
+  "recording": {
+    "durationSeconds": 352.56,
+    "width": 960,
+    "height": 540,
+    "containsAudio": false,
+    "note": "Recorded from five browser replay inputs before the last backdrop cache refinement. Exploration runs faster; descent and combat use their original clock."
+  }
+}

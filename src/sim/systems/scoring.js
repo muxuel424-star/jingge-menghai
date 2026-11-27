@@ -17,7 +17,10 @@ export function chooseMissions(game) {
 }
 export function makeResult(game, outcome) {
   const won = outcome === 'CLEARED'; game.stats.win = won ? 1 : 0; game.stats.seconds = game.time;
-  const completed = game.missions.filter(m => m.comparison === 'equal' ? won && game.stats[m.stat] === m.target : m.comparison === 'less' ? won && game.stats[m.stat] <= m.target : game.stats[m.stat] >= m.target);
+  const completed = game.missions.filter(m => {
+    if (m.id === 'win' && game.level.level < m.level) return false;
+    return m.comparison === 'equal' ? won && game.stats[m.stat] === m.target : m.comparison === 'less' ? won && game.stats[m.stat] <= m.target : game.stats[m.stat] >= m.target;
+  });
   const wages = clamp(Math.floor(game.stats.score / T.economy.wageDivisor), T.economy.wageMin, T.economy.wageMax);
   const first = won && !game.meta.levels?.[game.level.level]?.cleared;
   const earned = game.pearls + wages + completed.reduce((n, m) => n + m.pearls, 0) + (first ? T.economy.firstClear : 0);

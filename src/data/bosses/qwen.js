@@ -14,4 +14,3 @@ export const QWEN = defineBoss({
   ],
   counterSkill: 'fan', defeat: { pose: 'bow', action: 'placeLastPlate', dissolve: 'porcelainDustToDreamfish' },
 });
-export default QWEN;

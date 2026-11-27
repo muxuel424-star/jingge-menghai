@@ -1,0 +1,15 @@
+{
+  "tolerance": 0.02,
+  "files": {
+    "bay-deep.webp": "d005e7820c0fd2e6cbbc3d2b377dff9698847d836fde8b6443fa7fa5599d24c7",
+    "bay-boss.webp": "2e1b47eac99127aacf98040f21412184511e0d2734efe05e51408a340377a351",
+    "porcelain-deep.webp": "b606f7b8e65cb07b2b31fb0d76090dca8fdde2e7e39c56aea050d2ec312e69d2",
+    "porcelain-boss.webp": "e1b13a2632ddb376656bb0aaafe8b20e6cf238b58e0683f0d81f5d1b25f7c1ce",
+    "violet-deep.webp": "2f53cf79639ade39725078400e55184b237e4d93a84f0346e7dc52c34630602a",
+    "violet-boss.webp": "89f6e3dae244e4e92606d0269767b8261c866210326a20f1a019d7e52a28eb08",
+    "magma-deep.webp": "2f8e732f2a2f7be9fc80ac3b65fdd67a6f4e74a9ecaad1f4c90fd54fd85301bd",
+    "magma-boss.webp": "ab5444233880a74f5d25a4f49074593f9113bab39039d4466638a5c8acb7198a",
+    "sanctuary-deep.webp": "0eed68cc7f2ca96a0ef1362d6fd0dacc13756c3eb96dde6baae1c90be0933553",
+    "sanctuary-boss.webp": "d24b301a08bb03f79c45ee94cd17f41720504950915fb44565bf4be8e6199895"
+  }
+}

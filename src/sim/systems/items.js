@@ -1,6 +1,7 @@
 import { ITEMS, ITEM_RULES } from '../../data/items.js';
 import { TUNING as T } from '../../data/tuning.js';
 import { clamp, distance } from '../math.js';
+import { forecastSupplies } from './supply.js';
 export function applyItem(game, key) {
   const p = game.player, spec = ITEMS[key];
   if (!spec) return false;
@@ -17,6 +18,7 @@ export function applyItem(game, key) {
 }
 export function tickItems(game, dt) {
   const p = game.player;
+  forecastSupplies(game);
   for (const buff of p.buffs) { buff.remaining -= dt; if (buff.key === 'smoke' && buff.remaining <= 0) game.targetGrace = T.fish.retargetGrace; }
   p.buffs = p.buffs.filter(b => b.remaining > 0 && (b.key !== 'shield' || p.shield > 0));
   for (const item of game.entities.pickups) {
